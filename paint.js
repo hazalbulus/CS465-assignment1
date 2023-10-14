@@ -1,5 +1,6 @@
 var canvas;
 var gl;
+//
 
 var maxTri = 2000000;
 var maxVer = 3 * maxTri;
