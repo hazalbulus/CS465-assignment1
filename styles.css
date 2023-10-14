@@ -1,0 +1,143 @@
+.container {
+    width: 100%;
+    height: 90vh;  /* Adjusts the height to full viewport height */
+}
+
+.left-half, .right-half {
+    height: 100%;
+    box-sizing: border-box; /* Makes sure padding does not add to the width */
+}
+
+.left-half {
+    width: 75%;
+    background-color: white; /* Makes left-half background white */
+}
+
+.right-half {
+    width:25%;
+    background-color: #9c0c54; /* Adjusts color according to your design */
+}
+
+canvas {
+    width: 100%;
+    height: 100%;
+    border: 2px solid black; /* Adds a border to visualize canvas space */
+    display: block;  /* Removes any unwanted space below the canvas */
+}
+
+.rad-label {
+    display: flex;
+    align-items: center;
+    border-radius: 100px;
+    width: 150px;
+    padding: 14px 16px;
+    margin: 10px 0;
+    cursor: pointer;
+    transition: .3s;
+  }
+  
+  .rad-label:hover,
+  .rad-label:focus-within {
+    background: hsla(0, 0%, 80%, .14);
+  }
+  
+  .rad-input {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    z-index: -1;
+  }
+  
+  .rad-design {
+    width: 22px;
+    height: 22px;
+    border-radius: 100px;
+  
+    background: linear-gradient(to right bottom, hsl(0, 0%, 0%), hsl(0, 100%, 50%));
+    position: relative;
+  }
+  
+  .rad-design::before {
+    content: '';
+    display: inline-block;
+    width: inherit;
+    height: inherit;
+    border-radius: inherit;
+    background: hsl(0, 0%, 90%);
+    transform: scale(1.1);
+    transition: .3s;
+  }
+  
+  .rad-input:checked+.rad-design::before {
+    transform: scale(0);
+  }
+  
+  .rad-text {
+    color: hsl(0, 0%, 60%);
+    margin-left: 14px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    font-size: 18px;
+    font-weight: 900;
+    transition: .3s;
+  }
+  
+  .rad-input:checked~.rad-text {
+    color: hsl(0, 0%, 40%);
+  }
+  
+.layer-div{
+    margin-left: 25%;
+}
+
+.era{
+  display:block; 
+  background-color: #59788E; 
+  width:200px; 
+  padding: 10px 25px;
+  margin-left:25%;
+  border-width:3px;
+  border-radius: 10%;
+  border-color: #FF0000;
+}
+
+.button{ 
+  height: 40px;
+  width: 60px;
+  background-color: rgb(204, 204, 204);
+  border: 2px;
+  border-radius: 4px
+}
+.clicked{ 
+  height: 40px;
+  width: 60px;
+  background-color: rgb(126, 126, 126);
+  border: 2px;
+  border-radius: 4px
+}
+#cBtn0 { background-color: #00FF00; }
+#cBtn1 { background-color: #FF0000; }
+#cBtn2 { background-color: #FFFF00; }
+#cBtn3 { background-color: #000000; }
+#cBtn4 { background-color: #FF8C00; }
+#cBtn5 { background-color: #FF69B4; }
+#cBtn6 { background-color: #40E0D0; }
+#cBtn7 { background-color: #FF6347; }
+
+
+
+.color-btns button {
+    width: 60px;
+    height: 60px;
+    border-radius: 30px 30px;
+    margin: 5px;
+    border: none;
+    cursor: pointer;
+}
+
+.color-btns button:focus {
+    outline: none;
+}
