@@ -39,14 +39,8 @@ var moveClick = 0;
 var moveStart2;
 var moveStart3;
 
-var quad_index = 0;
-var ellipse_index = 0;
-var tri_index = 0;
 var draw = false;
 
-var quad_points = [];
-var ellipse_points = [];
-var tri_points = [];
 var allpoints = [];
 var points_info = [];
 var shape_colors = [];
@@ -791,27 +785,7 @@ function changeColor(color){
     preferredColor = [color, color, color, color];
 }
 
-function popCheck() {
-    if(points_info[points_info.length - 1] == "quad_line"){
-            points_info.pop();         
-            allpoints.pop();
-            allpoints.pop();
-            allpoints.pop(); 
-            allpoints.pop();
-        
-                
-    }else if(points_info[points_info.length - 1] == "ellipse_line"){
-        points_info.pop();
-        for(var i = 0; i < 360; i+=3){
-            allpoints.pop();
-        } 
-    }else if(points_info[points_info.length - 1] == "triangle_line"){
-        points_info.pop();
-        allpoints.pop();
-        allpoints.pop();
-        allpoints.pop();
-    }
-}
+
 
 function render() { 
     gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT );
