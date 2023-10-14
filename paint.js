@@ -50,14 +50,8 @@ var allpoints = [];
 var points_info = [];
 var shape_colors = [];
 var modes = [
-    "quad",
-    "triangle",
-    "ellipse",
     "pencil",
     "move",
-    "lquad",
-    "ltriangle",
-    "lellipse"
 ];
 var currentmode = "pencil";
 
@@ -70,37 +64,12 @@ window.onload = function init() {
     const fileBtn = document.getElementById("up-file");
     const uploadTxt = document.getElementById("txt");
 
-    
 
     changeColor(vec4( 0.0, 0.0, 0.0, 1.0 )); //init black
-
-    colorPicker.on('color:change', function(color) {
-        stopEraser();
-        stopMoveOn();
-        changeColor(vec4(color.rgba.r/255.0, color.rgba.g/255.0, color.rgba.b/255.0, color.rgba.a));
-      });
+    gl.viewport( 0, 0, canvas.width, canvas.height );
 
     canvas.addEventListener("mousedown", function(event){
-        if(currentmode == "quad" || currentmode == "lquad"){
-            draw = true;
-            var crtLoc = findLayerLoc(crtLayer);
-            var z = ((crtLoc)*0.25) - 0.99;
-            var t = vec3(2*event.clientX/canvas.width-1, 
-               2*(canvas.height-event.clientY)/canvas.height-1, z);
-            quad_points.push(t);
-            shape_colors.push(preferredColor[0], preferredColor[1], preferredColor[2], preferredColor[3]);
-           
-        } else if(currentmode == "ellipse" || currentmode == "lellipse"){
-            draw = true;
-            var crtLoc = findLayerLoc(crtLayer);
-            var z = ((crtLoc)*0.25) - 0.99;
-            var t = vec3(2*event.clientX/canvas.width-1, 
-               2*(canvas.height-event.clientY)/canvas.height-1, z);
-            ellipse_points.push(t);
-            for(var i = 0; i < 30; i++){
-                shape_colors.push(preferredColor[0], preferredColor[1], preferredColor[2], preferredColor[3]);
-            } 
-        } else if(currentmode == "triangle" || currentmode == "ltriangle"){
+      if(currentmode == "triangle" || currentmode == "ltriangle"){
             draw = true;
             var crtLoc = findLayerLoc(crtLayer);
             var z = ((crtLoc)*0.25) - 0.99;
@@ -157,81 +126,7 @@ window.onload = function init() {
     });
 
     canvas.addEventListener("mouseup", function(event){
-        if(currentmode == "quad" || currentmode == "lquad" ){
-            popCheck();
-            if(currentmode == "quad"){
-   
-                points_info.push("quad");
-            }else{
-                points_info.push("lquad_line");      
-            }
-            
-            draw = false;
-            var crtLoc = findLayerLoc(crtLayer);
-            var z = ((crtLoc)*0.25) - 0.99;
-            gl.bindBuffer( gl.ARRAY_BUFFER, vBuffer );
-            var t1= quad_points[quad_index*4];
-            var t3 = vec3(2*event.clientX/canvas.width-1, 
-                   2*(canvas.height-event.clientY)/canvas.height-1, z);
-            var t2 =  vec3(t3[0], t1[1], z); 
-            var t4 =  vec3(t1[0], t3[1], z); 
-            quad_points.push(t2);
-            quad_points.push(t3);
-            quad_points.push(t4);
-            allpoints.push(t1);
-            allpoints.push(t2);
-            allpoints.push(t3);
-            allpoints.push(t4);
-
-            var temparr = allpoints.concat(points);
-            console.log(points.length);
-            gl.bufferSubData(gl.ARRAY_BUFFER, 0, flatten(temparr));
-
-            gl.bindBuffer( gl.ARRAY_BUFFER, cBuffer );
-            var tempcol = shape_colors.concat(lineColors);
-            gl.bufferSubData(gl.ARRAY_BUFFER, 0, flatten(tempcol));
-
-            render();
-            quad_index++;
-        } else if(currentmode == "ellipse" || currentmode == "lellipse"){ 
-            popCheck();
-            if(currentmode == "ellipse"){
-                
-                points_info.push("ellipse");
-            }  
-            else{
-                points_info.push("lellipse_line");
-            }
-            draw = false;
-            var crtLoc = findLayerLoc(crtLayer);
-            var z = ((crtLoc)*0.25) - 0.99;
-            gl.bindBuffer( gl.ARRAY_BUFFER, vBuffer );
-            var t1= ellipse_points[ellipse_index*120];
-            ellipse_points.pop();
-              
-            var t2 = vec3(2*event.clientX/canvas.width-1, 
-               2*(canvas.height-event.clientY)/canvas.height-1, z); 
-            var center = vec3((t1[0]+t2[0])/2, (t1[1]+t2[1])/2, z);
-            var rad_h = Math.abs(t1[1] - t2[1]) / 2;
-            var rad_w = Math.abs(t1[0] - t2[0]) / 2; 
-
-            for(var i = 0; i < 360; i+=3){
-                var x = rad_w * Math.cos(i/(2*Math.PI));
-                var y = rad_h * Math.sin(i/(2*Math.PI));
-                var point = vec3(x+center[0], y+center[1], z);
-                ellipse_points.push(point);
-                allpoints.push(point);
-            }
-            var temparr = allpoints.concat(points);
-            gl.bufferSubData(gl.ARRAY_BUFFER, 0, flatten(temparr));
-
-            gl.bindBuffer( gl.ARRAY_BUFFER, cBuffer );
-            temparr = shape_colors.concat(lineColors);
-            gl.bufferSubData(gl.ARRAY_BUFFER, 0, flatten(temparr));
-            
-            render();
-            ellipse_index++;
-        }  else if(currentmode == "triangle" || currentmode == "ltriangle"){ 
+      if(currentmode == "triangle" || currentmode == "ltriangle"){ 
             popCheck();
             if(currentmode == "triangle"){
                 
@@ -322,65 +217,7 @@ window.onload = function init() {
     });
 
     canvas.addEventListener("mousemove", function(event){
-        if((currentmode == "quad" || currentmode == "lquad") && draw){
-            popCheck();
-            points_info.push("quad_line");
-            var crtLoc = findLayerLoc(crtLayer);
-            var z = ((crtLoc)*0.25) - 0.99;
-            gl.bindBuffer( gl.ARRAY_BUFFER, vBuffer );
-            var t1= quad_points[quad_index*4];
-            var t3 = vec3(2*event.clientX/canvas.width-1, 
-            2*(canvas.height-event.clientY)/canvas.height-1, z); 
-            var t2 =  vec3(t3[0], t1[1], z); 
-            var t4 =  vec3(t1[0], t3[1], z); 
     
-            allpoints.push(t1);
-            allpoints.push(t2);
-            allpoints.push(t3);
-            allpoints.push(t4);
-
-            var temparr = allpoints.concat(points);
-            gl.bufferSubData(gl.ARRAY_BUFFER, 0, flatten(temparr));
-
-            gl.bindBuffer( gl.ARRAY_BUFFER, cBuffer );
-            
-            var line_color = shape_colors.concat(lineColors);
-            gl.bufferSubData(gl.ARRAY_BUFFER, 0, flatten(line_color));
- 
-            render();       
-        } else
-        if((currentmode == "ellipse" || currentmode == "lellipse") && draw){
-            popCheck();
-            points_info.push("ellipse_line");
-            var crtLoc = findLayerLoc(crtLayer);
-            var z = ((crtLoc)*0.25) - 0.99;
-            gl.bindBuffer( gl.ARRAY_BUFFER, vBuffer );
-            var t1= ellipse_points[ellipse_index*120];
-            var t2 = vec3(2*event.clientX/canvas.width-1, 
-            2*(canvas.height-event.clientY)/canvas.height-1, z); 
-            var center = vec3((t1[0]+t2[0])/2, (t1[1]+t2[1])/2, z);
-            var rad_h = Math.abs(t1[1] - t2[1]) / 2;
-            var rad_w = Math.abs(t1[0] - t2[0]) / 2; 
-
-            for(var i = 0; i < 360; i+=3){
-                var x = rad_w * Math.cos(i/(2*Math.PI));
-                var y = rad_h * Math.sin(i/(2*Math.PI));
-                var point = vec3(x+center[0], y+center[1], z);
-                allpoints.push(point);
-            }
-
-            var temparr = allpoints.concat(points);
-            gl.bufferSubData(gl.ARRAY_BUFFER, 0 , flatten(temparr));
-
-            gl.bindBuffer( gl.ARRAY_BUFFER, cBuffer );
-            var line_color = []
-            for(var i = 0; i < 120; i++){
-                line_color.push(shape_colors[shape_colors.length-1]);
-            } 
-            line_color = shape_colors.concat(lineColors, line_color);
-            gl.bufferSubData(gl.ARRAY_BUFFER, 0, flatten(line_color));
-            render();     
-        }  else
         if((currentmode == "triangle" || currentmode == "ltriangle") && draw){
             popCheck();
             points_info.push("triangle_line");
@@ -672,14 +509,8 @@ window.onload = function init() {
         
             eraserModeOn = true;
        
-        currentmode = modes[3];
+        currentmode = modes[0];
         unclick("brush-btn");
-        unclick("rectangle-btn");
-        unclick("ellipse-btn");
-        unclick("lrectangle-btn");
-        unclick("ltriangle-btn");
-        unclick("lellipse-btn");
-        unclick("triangle-btn");
         click("eraser");
     }
 
@@ -828,108 +659,19 @@ window.onload = function init() {
         } else{
             stopMoveOn();
         }
-        unclick("rectangle-btn");
-        unclick("ellipse-btn");
-        unclick("triangle-btn");
-        unclick("lrectangle-btn");
-        unclick("ltriangle-btn");
-        unclick("lellipse-btn");
         unclick("brush-btn");
         unclick("eraser");
         //moveClick++;
         console.log("moveClick son: " + moveClick);
     }
 
-    document.getElementById("rectangle-btn").onclick = function(){
-        stopMoveOn();
-        stopEraser();
-        currentmode = modes[0];
-        click("rectangle-btn");
-        unclick("ellipse-btn");
-        unclick("triangle-btn");
-        unclick("lrectangle-btn");
-        unclick("ltriangle-btn");
-        unclick("lellipse-btn");
-        unclick("brush-btn");
-        unclick("eraser");
-    }
-    document.getElementById("ellipse-btn").onclick = function(){
-        stopMoveOn();
-        stopEraser();
-        currentmode = modes[2];  
-        click("ellipse-btn");
-        unclick("rectangle-btn");
-        unclick("triangle-btn");
-        unclick("lrectangle-btn");
-        unclick("ltriangle-btn");
-        unclick("lellipse-btn");
-        unclick("brush-btn");
-        unclick("eraser");
-    }
-    document.getElementById("triangle-btn").onclick = function(){
-        stopMoveOn();
-        stopEraser();
-        currentmode = modes[1];
-        click("triangle-btn");
-        unclick("rectangle-btn");
-        unclick("ellipse-btn");
-        unclick("lrectangle-btn");
-        unclick("ltriangle-btn");
-        unclick("lellipse-btn");
-        unclick("brush-btn");
-        unclick("eraser");
-    }
-    document.getElementById("lrectangle-btn").onclick = function(){
-        stopMoveOn();
-        stopEraser();
-        currentmode = modes[5];
-        click("lrectangle-btn");
-        unclick("ltriangle-btn");
-        unclick("lellipse-btn");
-        unclick("triangle-btn");
-        unclick("rectangle-btn");
-        unclick("ellipse-btn");
-        unclick("brush-btn");
-        unclick("eraser");
-    }
-    document.getElementById("lellipse-btn").onclick = function(){
-        stopMoveOn();
-        stopEraser();
-        currentmode = modes[7];
-        click("lellipse-btn");
-        unclick("lrectangle-btn");
-        unclick("ltriangle-btn");
-        unclick("triangle-btn");
-        unclick("rectangle-btn");
-        unclick("ellipse-btn");
-        unclick("brush-btn");
-        unclick("eraser");
-    }
-    document.getElementById("ltriangle-btn").onclick = function(){
-        stopMoveOn();
-        stopEraser();
-        currentmode = modes[6];
-        click("ltriangle-btn");
-        unclick("lrectangle-btn");
-        unclick("lellipse-btn");
-        unclick("triangle-btn");
-        unclick("rectangle-btn");
-        unclick("ellipse-btn");
-        unclick("brush-btn");
-        unclick("eraser");
-    }
+
     document.getElementById("brush-btn").onclick = function(){
         stopMoveOn();
         stopEraser();
-        currentmode = modes[3];
+        currentmode = modes[0];
         click("brush-btn");
         unclick("eraser");
-        unclick("rectangle-btn");
-        unclick("ellipse-btn");
-        unclick("triangle-btn");
-        unclick("lrectangle-btn");
-        unclick("ltriangle-btn");
-        unclick("lellipse-btn");
     }
 
     gl.viewport(0,0,canvas.width,canvas.height);
@@ -959,13 +701,6 @@ window.onload = function init() {
     render(); 
 }
 
-function calcQuad(center, radius, z) {
-    var a = radius/(Math.sqrt(2));
-    return [vec3(center[0] - a, center[1] + a, z),
-            vec3(center[0] - a, center[1] - a, z),
-            vec3(center[0] + a, center[1] + a, z),
-            vec3(center[0] + a, center[1] - a, z)];
-}
 
 function mpCircle(centerX, centerY, radius, arr){
     var d = (5 - radius * 4)/4
@@ -1034,7 +769,7 @@ function stopMoveOn(){
 function stopEraser(){
 
     eraserModeOn = false;
-    if(currentmode == modes[3]){
+    if(currentmode == modes[0]){
         click("brush-btn");
         unclick("eraser");
     }
