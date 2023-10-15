@@ -334,41 +334,77 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   document.getElementById("cBtn0").onclick = function () {
     deactivateEraser();
+    unclick("zoomin");
     changeColor("#00FF00");
+    click("brush-btn");
+
+    zoomMode = false;
+
   };
 
   document.getElementById("cBtn1").onclick = function () {
     deactivateEraser();
     changeColor("red");
+    unclick("zoomin");
+    click("brush-btn");
+
+    zoomMode = false;
+
+
   };
 
   document.getElementById("cBtn2").onclick = function () {
     deactivateEraser();
+    unclick("zoomin");
+    zoomMode = false;
+    click("brush-btn");
+
     changeColor("yellow");
   };
 
   document.getElementById("cBtn3").onclick = function () {
     deactivateEraser();
+    unclick("zoomin");
+    click("brush-btn");
+
+    zoomMode = false;
+
     changeColor("black");
   };
 
   document.getElementById("cBtn4").onclick = function () {
     deactivateEraser();
+    unclick("zoomin");
+    click("brush-btn");
+    zoomMode = false;
+
     changeColor("orange");
   };
 
   document.getElementById("cBtn5").onclick = function () {
     deactivateEraser();
+    click("brush-btn");
+    unclick("zoomin");
+    zoomMode = false;
+
     changeColor("pink");
   };
 
   document.getElementById("cBtn6").onclick = function () {
     deactivateEraser();
+    unclick("zoomin");
+    click("brush-btn");
+
+zoomMode = false;
     changeColor("cyan");
   };
 
   document.getElementById("cBtn7").onclick = function () {
     deactivateEraser();
+    unclick("zoomin");
+    click("brush-btn");
+
+    zoomMode = false;
     changeColor("magenta");
   };
 
