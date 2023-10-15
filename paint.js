@@ -99,28 +99,24 @@ document.addEventListener("DOMContentLoaded", () => {
       ctx.lineTo(x, y + squareSize);
       ctx.lineTo(x + squareSize, y + squareSize);
       ctx.closePath();
-      ctx.stroke();
   
       ctx.beginPath();
       ctx.moveTo(cX, cY);
       ctx.lineTo(x + squareSize, y + squareSize);
       ctx.lineTo(x + squareSize, y);
       ctx.closePath();
-      ctx.stroke();
   
       ctx.beginPath();
       ctx.moveTo(cX, cY);
       ctx.lineTo(x + squareSize, y);
       ctx.lineTo(x, y);
       ctx.closePath();
-      ctx.stroke();
   
       ctx.beginPath();
       ctx.moveTo(cX, cY);
       ctx.lineTo(x, y);
       ctx.lineTo(x, y + squareSize);
       ctx.closePath();
-      ctx.stroke();
     }
   
     function drawTriangle(i, j, position) {
@@ -160,7 +156,6 @@ document.addEventListener("DOMContentLoaded", () => {
     } else {
         ctx.fillStyle = preferredColor;
         ctx.fill();
-        ctx.stroke();
     }
     }
     document.getElementById("cBtn0").onclick = function () {
