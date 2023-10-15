@@ -11,6 +11,8 @@ document.addEventListener("DOMContentLoaded", () => {
   let zoom = 1;
   let zoomMode = false;
 
+  const triangles = [];
+
   if (!ctx) {
     alert("Your browser does not support canvas!");
     return;
@@ -29,36 +31,33 @@ document.addEventListener("DOMContentLoaded", () => {
   let startX, startY;
   let selectedImageData = null;
   let imgX, imgY, imgWidth, imgHeight;
-  
-  document.getElementById('moveBtn').addEventListener('click', () => {
-      isMoveMode = !isMoveMode;
-      if (isMoveMode) {
-          canvas.style.cursor = "move";
-          unclick('brush-btn');
-          unclick('zoomin');    
-          deactivateEraser();
-      } else {
-          canvas.style.cursor = "default";
-      }
 
+  document.getElementById("moveBtn").addEventListener("click", () => {
+    isMoveMode = !isMoveMode;
+    if (isMoveMode) {
+      canvas.style.cursor = "move";
+      unclick("brush-btn");
+      unclick("zoomin");
+      deactivateEraser();
+    } else {
+      canvas.style.cursor = "default";
+    }
   });
-  
-  
-  canvas.addEventListener('mousemove', (event) => {
-      if (isMoveMode && selectedImageData) {
-          const x = event.clientX - canvas.getBoundingClientRect().left;
-          const y = event.clientY - canvas.getBoundingClientRect().top;
-          
-          ctx.clearRect(imgX, imgY, imgWidth, imgHeight);  // Clear the previous drawn image
-          // Draw other elements, like grid, etc.
-          // drawGrid(); 
-          
-          ctx.putImageData(selectedImageData, x, y);  // Draw at the new position
-          imgX = x;
-          imgY = y;
-      }
+
+  canvas.addEventListener("mousemove", (event) => {
+    if (isMoveMode && selectedImageData) {
+      const x = event.clientX - canvas.getBoundingClientRect().left;
+      const y = event.clientY - canvas.getBoundingClientRect().top;
+
+      ctx.clearRect(imgX, imgY, imgWidth, imgHeight); // Clear the previous drawn image
+      // Draw other elements, like grid, etc.
+      // drawGrid();
+
+      ctx.putImageData(selectedImageData, x, y); // Draw at the new position
+      imgX = x;
+      imgY = y;
+    }
   });
- 
 
   function getTransformedMousePos(canvas, evt) {
     const rect = canvas.getBoundingClientRect();
@@ -90,14 +89,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function drawWithTransformations() {
     ctx.save(); // Save the current state
-    saveState();
+    //saveState();
     ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the canvas
     ctx.translate(panX, panY); // Move the canvas
     ctx.scale(zoom, zoom); // Zoom in/out
     // All your drawing code comes here...
-    drawGrid(); // Assuming this function draws your static grid
+    //drawGrid(); // Assuming this function draws your static grid
 
-    // ... any other drawing logic, but NOT event listeners ...
+    // Draw all triangles
+    triangles.forEach(({ i, j, position, color }) => {
+      preferredColor = color; // Set the color for each triangle
+      drawTriangle(i, j, position); // Redraw each triangle
+    });
 
     ctx.restore(); // Restore the original state
   }
@@ -135,23 +138,22 @@ document.addEventListener("DOMContentLoaded", () => {
 
   canvas.addEventListener("mouseup", (event) => {
     if (isMoveMode && selectedImageData) {
-        const endX = event.clientX - canvas.getBoundingClientRect().left;
-        const endY = event.clientY - canvas.getBoundingClientRect().top;
-        imgX = endX;
-        imgY = endY;
+      const endX = event.clientX - canvas.getBoundingClientRect().left;
+      const endY = event.clientY - canvas.getBoundingClientRect().top;
+      imgX = endX;
+      imgY = endY;
     }
     drawing = false;
     saveState();
   });
-  canvas.addEventListener("mousedown", function (e) { //Sürüklemek için
+  canvas.addEventListener("mousedown", function (e) {
+    //Sürüklemek için
     if (isMoveMode) {
-        startX = event.clientX - canvas.getBoundingClientRect().left;
-        startY = event.clientY - canvas.getBoundingClientRect().top;
-    }
-    else if(zoomMode) 
-    {
-    let startX = e.clientX;
-    let startY = e.clientY;
+      startX = event.clientX - canvas.getBoundingClientRect().left;
+      startY = event.clientY - canvas.getBoundingClientRect().top;
+    } else if (zoomMode) {
+      let startX = e.clientX;
+      let startY = e.clientY;
 
       function onMouseMove(e) {
         const dx = e.clientX - startX;
@@ -199,8 +201,8 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("brush-btn").onclick = function () {
     deactivateEraser();
     unclick("zoomin");
-    zoomMode=false;
-    isMoveMode=false;
+    zoomMode = false;
+    isMoveMode = false;
     click("brush-btn");
   };
 
@@ -210,9 +212,9 @@ document.addEventListener("DOMContentLoaded", () => {
     deactivateEraser();
     click("zoomin");
     unclick("brush-btn");
-    isMoveMode=false;
-    if(!zoomMode){
-        unclick("zoomin");
+    isMoveMode = false;
+    if (!zoomMode) {
+      unclick("zoomin");
     }
   };
 
@@ -221,7 +223,7 @@ document.addEventListener("DOMContentLoaded", () => {
     click("eraser");
     unclick("brush-btn");
     unclick("zoomin");
-    isMoveMode=false;
+    isMoveMode = false;
     eraserModeOn = true;
   }
 
@@ -266,6 +268,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function drawTriangle(i, j, position) {
+    triangles.push({ i, j, position, color: preferredColor });
     const x = i * squareSize;
     const y = j * squareSize;
     const halfSize = squareSize / 2;
