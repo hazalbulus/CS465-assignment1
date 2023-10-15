@@ -14,6 +14,9 @@ document.addEventListener("DOMContentLoaded", () => {
     console.log("Context obtained", ctx);
   
     let drawing = false;
+    const states = [];
+    let currentStateIndex = -1;
+    const maxStates = 10;
     const numSquares = 60; // number of squares per row/column
     const squareSize = canvas.width / numSquares;
   
@@ -26,6 +29,7 @@ document.addEventListener("DOMContentLoaded", () => {
   
     canvas.addEventListener("mouseup", () => {
       drawing = false;
+      saveState();
     });
   
     canvas.addEventListener("mousemove", function (e) {
@@ -195,5 +199,51 @@ document.addEventListener("DOMContentLoaded", () => {
     function changeColor(color) {
       preferredColor = color;
     }
+    function saveState() {
+        if (currentStateIndex < states.length - 1) {
+            states.splice(currentStateIndex + 1);
+        }
+        
+        if (states.length >= maxStates) {
+            states.shift();
+        } 
+
+        states.push(canvas.toDataURL());
+        currentStateIndex = states.length - 1;
+    }
+
+    function undo() {
+        if (currentStateIndex <= 0) {
+            alert("Cannot undo more!");
+            return;
+        }
+        currentStateIndex--;
+        loadState();
+    }
+
+    function redo() {
+        if (currentStateIndex >= states.length - 1) {
+            alert("Cannot redo more!");
+            return;
+        }
+        currentStateIndex++;
+        loadState();
+    }
+
+    function loadState() {
+        const imgData = states[currentStateIndex];
+        const img = new Image();
+        img.src = imgData;
+        img.onload = () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(img, 0, 0);
+        };
+    }
+
+    // Event listeners for buttons
+    document.getElementById('undo').addEventListener('click', undo);
+    document.getElementById('redo').addEventListener('click', redo);
+    
+    saveState(); // Save the initial state (blank canvas)
   });
   
