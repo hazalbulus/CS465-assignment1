@@ -9,6 +9,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let panX = 0;
   let panY = 0;
   let zoom = 1;
+  let zoomMode=false;
 
   if (!ctx) {
     alert("Your browser does not support canvas!");
@@ -24,18 +25,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const numSquares = 60; // number of squares per row/column
   const squareSize = canvas.width / numSquares;
 
-  // Draw the initial grid
 
-  // Event Listeners
-  canvas.addEventListener("mousedown", () => {
-    drawing = true;
-  });
-
-  canvas.addEventListener("mouseup", () => {
-    drawing = false;
-    saveState();
-    drawWithTransformations();
-  });
+ 
 
   function getTransformedMousePos(canvas, evt) {
     const rect = canvas.getBoundingClientRect();
@@ -66,10 +57,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function drawWithTransformations() {
     ctx.save(); // Save the current state
+    saveState();
     ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the canvas
     ctx.translate(panX, panY); // Move the canvas
     ctx.scale(zoom, zoom); // Zoom in/out
-
     // All your drawing code comes here...
     drawGrid(); // Assuming this function draws your static grid
 
@@ -81,6 +72,7 @@ document.addEventListener("DOMContentLoaded", () => {
   canvas.addEventListener( //Yakınlaştırmak için
     "wheel",
     function (e) {
+        if(!zoomMode) return;
       e.preventDefault();
       const scaleFactor = 1.1;
       const cursorX = e.clientX - canvas.getBoundingClientRect().left;
@@ -105,8 +97,15 @@ document.addEventListener("DOMContentLoaded", () => {
     },
     { passive: false }
   );
+ // Event Listeners
 
+  canvas.addEventListener("mouseup", () => {
+    drawing = false;
+    saveState();
+  });
   canvas.addEventListener("mousedown", function (e) { //Sürüklemek için
+    if(zoomMode) 
+    {
     let startX = e.clientX;
     let startY = e.clientY;
 
@@ -119,7 +118,7 @@ document.addEventListener("DOMContentLoaded", () => {
       startX = e.clientX;
       startY = e.clientY;
 
-      drawWithTransformations();
+       drawWithTransformations();
     }
 
     function onMouseUp() {
@@ -128,7 +127,11 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     canvas.addEventListener("mousemove", onMouseMove);
-    canvas.addEventListener("mouseup", onMouseUp);
+    canvas.addEventListener("mouseup", onMouseUp);}
+    else{
+        drawing = true;
+        
+    }
   });
 
   function getMousePos(canvas, evt) {
@@ -139,29 +142,44 @@ document.addEventListener("DOMContentLoaded", () => {
     };
   }
 
-  function drawGrid() {
-    for (let i = 0; i < numSquares; i++) {
-      for (let j = 0; j < numSquares; j++) {
-        drawSquare(i, j);
-      }
-    }
-  }
+   function drawGrid() {
+     for (let i = 0; i < numSquares; i++) {
+       for (let j = 0; j < numSquares; j++) {
+         drawSquare(i, j);
+       }
+     }
+   }
   document.getElementById("eraser").onclick = function () {
     activateEraser();
   };
 
   document.getElementById("brush-btn").onclick = function () {
     deactivateEraser();
+    unclick("zoomin");
+    zoomMode=false;
+    click("brush-btn");
+  };
+
+  document.getElementById("zoomin").onclick = function () {
+    //toggle zoomin button
+    zoomMode=!zoomMode;
+    deactivateEraser();
+    click("zoomin");
+    unclick("brush-btn");
+    if(!zoomMode){
+        unclick("zoomin");
+    }
   };
 
   function activateEraser() {
+    zoomMode=false;
     click("eraser");
     unclick("brush-btn");
+    unclick("zoomin");
     eraserModeOn = true;
   }
 
   function deactivateEraser() {
-    click("brush-btn");
     unclick("eraser");
     eraserModeOn = false;
   }
