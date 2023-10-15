@@ -6,12 +6,18 @@ document.addEventListener("DOMContentLoaded", () => {
   const canvas = document.getElementById("gl-canvas");
   const ctx = canvas.getContext("2d");
 
+  let buffer = document.createElement("canvas");
+  let bufferCtx = buffer.getContext("2d");
+
+  buffer.width = canvas.width;
+  buffer.height = canvas.height;
+
   let panX = 0;
   let panY = 0;
   let zoom = 1;
   let zoomMode = false;
 
-  const triangles = [];
+  let triangles = [];
 
   if (!ctx) {
     alert("Your browser does not support canvas!");
@@ -49,11 +55,11 @@ document.addEventListener("DOMContentLoaded", () => {
       const x = event.clientX - canvas.getBoundingClientRect().left;
       const y = event.clientY - canvas.getBoundingClientRect().top;
 
-      ctx.clearRect(imgX, imgY, imgWidth, imgHeight); // Clear the previous drawn image
+      bufferCtx.clearRect(imgX, imgY, imgWidth, imgHeight); // Clear the previous drawn image
       // Draw other elements, like grid, etc.
       // drawGrid();
 
-      ctx.putImageData(selectedImageData, x, y); // Draw at the new position
+      bufferCtx.putImageData(selectedImageData, x, y); // Draw at the new position
       imgX = x;
       imgY = y;
     }
@@ -78,14 +84,25 @@ document.addEventListener("DOMContentLoaded", () => {
 
       // Determine which triangle to fill
       if (relX > relY) {
-        if (squareSize - relX > relY) drawTriangle(i, j, "top");
-        else drawTriangle(i, j, "right");
+        if (squareSize - relX > relY) drawTriangle(i, j, "top", bufferCtx);
+        else drawTriangle(i, j, "right", bufferCtx);
       } else {
-        if (squareSize - relX > relY) drawTriangle(i, j, "left");
-        else drawTriangle(i, j, "bottom");
+        if (squareSize - relX > relY) drawTriangle(i, j, "left", bufferCtx);
+        else drawTriangle(i, j, "bottom", bufferCtx);
       }
+      afterDrawing();
     }
   });
+
+  function updateBufferAndDraw() {
+    bufferCtx.clearRect(0, 0, buffer.width, buffer.height);
+
+    // Update your offscreen canvas as needed here. E.g., draw the grid, shapes, etc.
+    drawGrid();
+
+    // Draw the updated buffer on the main canvas
+    drawWithTransformations();
+  }
 
   function drawWithTransformations() {
     ctx.save(); // Save the current state
@@ -97,10 +114,12 @@ document.addEventListener("DOMContentLoaded", () => {
     //drawGrid(); // Assuming this function draws your static grid
 
     // Draw all triangles
-    triangles.forEach(({ i, j, position, color }) => {
-      preferredColor = color; // Set the color for each triangle
-      drawTriangle(i, j, position); // Redraw each triangle
-    });
+    // triangles.forEach(({ i, j, position, color }) => {
+    //   preferredColor = color; // Set the color for each triangle
+    //   drawTriangle(i, j, position); // Redraw each triangle
+    // });
+
+    ctx.drawImage(buffer, 0, 0);
 
     ctx.restore(); // Restore the original state
   }
@@ -149,8 +168,8 @@ document.addEventListener("DOMContentLoaded", () => {
   canvas.addEventListener("mousedown", function (e) {
     //Sürüklemek için
     if (isMoveMode) {
-      startX = event.clientX - canvas.getBoundingClientRect().left;
-      startY = event.clientY - canvas.getBoundingClientRect().top;
+      startX = e.clientX - canvas.getBoundingClientRect().left;
+      startY = e.clientY - canvas.getBoundingClientRect().top;
     } else if (zoomMode) {
       let startX = e.clientX;
       let startY = e.clientY;
@@ -190,7 +209,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function drawGrid() {
     for (let i = 0; i < numSquares; i++) {
       for (let j = 0; j < numSquares; j++) {
-        drawSquare(i, j);
+        drawSquare(i, j, bufferCtx);
       }
     }
   }
@@ -231,82 +250,87 @@ document.addEventListener("DOMContentLoaded", () => {
     unclick("eraser");
     eraserModeOn = false;
   }
-  function drawSquare(i, j) {
+  function drawSquare(i, j, targetCtx) {
     const x = i * squareSize;
     const y = j * squareSize;
     const cX = x + squareSize / 2;
     const cY = y + squareSize / 2;
 
     // Example: Drawing outlines of triangles
-    ctx.beginPath();
-    ctx.moveTo(cX, cY);
-    ctx.lineTo(x, y + squareSize);
-    ctx.lineTo(x + squareSize, y + squareSize);
-    ctx.closePath();
-    ctx.stroke();
+    targetCtx.beginPath();
+    targetCtx.moveTo(cX, cY);
+    targetCtx.lineTo(x, y + squareSize);
+    targetCtx.lineTo(x + squareSize, y + squareSize);
+    targetCtx.closePath();
+    targetCtx.stroke();
 
-    ctx.beginPath();
-    ctx.moveTo(cX, cY);
-    ctx.lineTo(x + squareSize, y + squareSize);
-    ctx.lineTo(x + squareSize, y);
-    ctx.closePath();
-    ctx.stroke();
+    targetCtx.beginPath();
+    targetCtx.moveTo(cX, cY);
+    targetCtx.lineTo(x + squareSize, y + squareSize);
+    targetCtx.lineTo(x + squareSize, y);
+    targetCtx.closePath();
+    targetCtx.stroke();
 
-    ctx.beginPath();
-    ctx.moveTo(cX, cY);
-    ctx.lineTo(x + squareSize, y);
-    ctx.lineTo(x, y);
-    ctx.closePath();
-    ctx.stroke();
+    targetCtx.beginPath();
+    targetCtx.moveTo(cX, cY);
+    targetCtx.lineTo(x + squareSize, y);
+    targetCtx.lineTo(x, y);
+    targetCtx.closePath();
+    targetCtx.stroke();
 
-    ctx.beginPath();
-    ctx.moveTo(cX, cY);
-    ctx.lineTo(x, y);
-    ctx.lineTo(x, y + squareSize);
-    ctx.closePath();
-    ctx.stroke();
+    targetCtx.beginPath();
+    targetCtx.moveTo(cX, cY);
+    targetCtx.lineTo(x, y);
+    targetCtx.lineTo(x, y + squareSize);
+    targetCtx.closePath();
+    targetCtx.stroke();
   }
 
-  function drawTriangle(i, j, position) {
+  function drawTriangle(i, j, position, targetCtx) {
     triangles.push({ i, j, position, color: preferredColor });
     const x = i * squareSize;
     const y = j * squareSize;
     const halfSize = squareSize / 2;
 
-    ctx.beginPath();
+    targetCtx.beginPath();
     switch (position) {
       case "top":
-        ctx.moveTo(x, y);
-        ctx.lineTo(x + squareSize, y);
-        ctx.lineTo(x + halfSize, y + halfSize);
+        targetCtx.moveTo(x, y);
+        targetCtx.lineTo(x + squareSize, y);
+        targetCtx.lineTo(x + halfSize, y + halfSize);
         break;
       case "right":
-        ctx.moveTo(x + squareSize, y);
-        ctx.lineTo(x + squareSize, y + squareSize);
-        ctx.lineTo(x + halfSize, y + halfSize);
+        targetCtx.moveTo(x + squareSize, y);
+        targetCtx.lineTo(x + squareSize, y + squareSize);
+        targetCtx.lineTo(x + halfSize, y + halfSize);
         break;
       case "bottom":
-        ctx.moveTo(x, y + squareSize);
-        ctx.lineTo(x + squareSize, y + squareSize);
-        ctx.lineTo(x + halfSize, y + halfSize);
+        targetCtx.moveTo(x, y + squareSize);
+        targetCtx.lineTo(x + squareSize, y + squareSize);
+        targetCtx.lineTo(x + halfSize, y + halfSize);
         break;
       case "left":
-        ctx.moveTo(x, y);
-        ctx.lineTo(x, y + squareSize);
-        ctx.lineTo(x + halfSize, y + halfSize);
+        targetCtx.moveTo(x, y);
+        targetCtx.lineTo(x, y + squareSize);
+        targetCtx.lineTo(x + halfSize, y + halfSize);
         break;
     }
-    ctx.closePath();
+    targetCtx.closePath();
     if (eraserModeOn) {
-      ctx.globalCompositeOperation = "destination-out";
-      ctx.fillStyle = "rgba(255,255,255,1)"; // using white to erase (with dest-out it becomes transparent)
-      ctx.fill();
-      ctx.globalCompositeOperation = "source-over"; // Reset
+      targetCtx.globalCompositeOperation = "destination-out";
+      targetCtx.fillStyle = "rgba(255,255,255,1)"; // using white to erase (with dest-out it becomes transparent)
+      targetCtx.fill();
+      targetCtx.globalCompositeOperation = "source-over"; // Reset
     } else {
-      ctx.fillStyle = preferredColor;
-      ctx.fill();
-      //ctx.stroke();
+      targetCtx.fillStyle = preferredColor;
+      targetCtx.fill();
+      //targetCtx.stroke();
     }
+  }
+
+  // After each draw operation, ensure to update the visible canvas
+  function afterDrawing() {
+    drawWithTransformations();
   }
   document.getElementById("cBtn0").onclick = function () {
     deactivateEraser();
