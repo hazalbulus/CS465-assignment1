@@ -1,5 +1,5 @@
-document.addEventListener("DOMContentLoaded", () => {
-    console.log("DOM loaded");
+var canvas;
+var gl;
 
     const canvas = document.getElementById("gl-canvas");
     const ctx = canvas.getContext('2d');
