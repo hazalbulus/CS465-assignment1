@@ -32,8 +32,8 @@
                     Oops ... your browser doesn't support the HTML5 canvas element
                 </canvas>
             </div>
-            <div class="right-half" style="padding-left: 5%;">
-                <div class="color-btns" style = "display:block;  margin-left:20%;">
+            <div class="right-half" style="padding-left: 4%;">
+                <div class="color-btns" style = "display:block;  margin-left:16%;">
                     <div class="color-pair">
                         <button id="cBtn0"></button>
                         <button id="cBtn1"></button>
@@ -55,16 +55,16 @@
                 
                 <div class="cont" style="display: flex;">
                     <div>
-                        <button id="saveBtn" style = "display:block; border-radius: 10%; background-color: #2fba7b; width:200px; padding: 10px 25px; margin-left:25%; margin-top: 12%; margin-bottom: 3px;">Save</button>
+                        <button id="saveBtn" style = "display:block; border-radius: 10%; background-color: #2fba7b; width:200px; padding: 10px 25px; margin-left:25%; margin-top: 12%; margin-bottom: 3px; font-size: x-large">Save</button>
                         <input type="file" id="up-file" hidden="hidden"/>
-                        <button type="button" id="selectBtn" style = "display:block; border-radius: 10%; background-color: #2f64ba; width:200px; padding: 10px 25px;margin-left:25%;">Choose a File</button>
+                        <button type="button" id="selectBtn" style = "display:block; border-radius: 10%; background-color: #2f64ba; width:200px; padding: 10px 25px;margin-left:25%; font-size: x-large">Choose a File</button>
                         <span id="txt" style = "display:block; padding-top: 25px; width:200px; padding-bottom: 25px; margin-left: 25%; font-size: 20px; color: #00FF00;">No file chosen, yet.</span>
-                        <button id="uplBtn" style = "display:block; border-radius: 10%; background-color: #2fba7b; width:200px; padding: 10px 25px;margin-left:25%; margin-bottom: 3px;">Load From a Save</button>
+                        <button id="uplBtn" style = "display:block; border-radius: 10%; background-color: #2fba7b; width:200px; padding: 10px 25px;margin-left:25%; margin-bottom: 3px; font-size: x-large">Load From a Save</button>
                         <div class="layer-div">
                             <label class="rad-label">
                               <input type="radio" class="rad-input" value="1" id="lay1" name="rad" checked="checked">
                               <div class="rad-design"></div>
-                              <div class="rad-text"id="1">Layer 1</div>
+                              <div class="rad-text"id="1" >Layer 1</div>
                             </label>
                             <label class="rad-label">
                               <input type="radio" class="rad-input" value="2" id="lay2" name="rad">
@@ -82,19 +82,14 @@
                               <div class="rad-text" id="4">Layer 4</div>
                             </label>
                         </div>
-                        <button id="aboveBtn" style = "display:block; border-radius: 10%; background-color: #34ca2f; width:200px; padding: 10px 25px;margin-left:25%; margin-bottom: 3px;">Move Above</button>
-                        <button id="belowBtn" style = "display:block; border-radius: 10%; background-color: #e03e3e; width:200px; padding: 10px 25px;margin-left:25%;">Move Below</button>
-                        <div style="display:block; margin-left: 25%; margin-top: 20px; color: red; size: 20px; font-size: 20px;">
-                            Brush Size<input id="slider" type="range"
-                             min="1" max="10" step="1" value="5" style="margin-top: 5px; width:200px;"/>
-                             <span style="display:block; margin-left: 80px;" id="size">5.0</span>
-                        </div>
-                        <button id="moveBtn" class="era">Move a Part</button>
-                        <div style="display:block; margin-left: 35%; margin-top: 20px;  size: 20px; ">
+                        <button id="aboveBtn" style = "display:block; border-radius: 10%; background-color: #34ca2f; width:200px; padding: 10px 25px;margin-left:25%; margin-bottom: 3px; font-size: x-large;">Move Above</button>
+                        <button id="belowBtn" style = "display:block; border-radius: 10%; background-color: #e03e3e; width:200px; padding: 10px 25px;margin-left:25%; font-size: x-large;">Move Below</button>
+                        <button id="moveBtn" class="era" style="font-size: x-large;">Move a Part</button>
+                        <div style="display:block; margin-left: 38%; margin-top: 20px;  size: 20px; ">
                                 <button id="undo"  class="button" ><img src=undo.png height="30"></button>
                                 <button id="redo"  class="button" ><img src=redo.png height="30"></button>
                                 </div>
-                            <div style="display:block; margin-left: 35%; margin-top: 20px;  size: 20px; ">
+                            <div style="display:block; margin-left: 38%; margin-top: 20px;  size: 20px; ">
                                 <button id="brush-btn"  class="clicked" ><img src=brush.png height="30"></button>
                                 <button id="eraser"  class="button" ><img src=eraser.png height="30"></button>
                                 </div>
