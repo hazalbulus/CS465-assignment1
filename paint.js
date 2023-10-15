@@ -25,7 +25,39 @@ document.addEventListener("DOMContentLoaded", () => {
   const numSquares = 60; // number of squares per row/column
   const squareSize = canvas.width / numSquares;
 
+  let isMoveMode = false;
+  let startX, startY;
+  let selectedImageData = null;
+  let imgX, imgY, imgWidth, imgHeight;
+  
+  document.getElementById('moveBtn').addEventListener('click', () => {
+      isMoveMode = !isMoveMode;
+      if (isMoveMode) {
+          canvas.style.cursor = "move";
+          unclick('brush-btn');
+          unclick('zoomin');    
+          deactivateEraser();
+      } else {
+          canvas.style.cursor = "default";
+      }
 
+  });
+  
+  
+  canvas.addEventListener('mousemove', (event) => {
+      if (isMoveMode && selectedImageData) {
+          const x = event.clientX - canvas.getBoundingClientRect().left;
+          const y = event.clientY - canvas.getBoundingClientRect().top;
+          
+          ctx.clearRect(imgX, imgY, imgWidth, imgHeight);  // Clear the previous drawn image
+          // Draw other elements, like grid, etc.
+          // drawGrid(); 
+          
+          ctx.putImageData(selectedImageData, x, y);  // Draw at the new position
+          imgX = x;
+          imgY = y;
+      }
+  });
  
 
   function getTransformedMousePos(canvas, evt) {
@@ -99,12 +131,22 @@ document.addEventListener("DOMContentLoaded", () => {
   );
  // Event Listeners
 
-  canvas.addEventListener("mouseup", () => {
+  canvas.addEventListener("mouseup", (event) => {
+    if (isMoveMode && selectedImageData) {
+        const endX = event.clientX - canvas.getBoundingClientRect().left;
+        const endY = event.clientY - canvas.getBoundingClientRect().top;
+        imgX = endX;
+        imgY = endY;
+    }
     drawing = false;
     saveState();
   });
   canvas.addEventListener("mousedown", function (e) { //Sürüklemek için
-    if(zoomMode) 
+    if (isMoveMode) {
+        startX = event.clientX - canvas.getBoundingClientRect().left;
+        startY = event.clientY - canvas.getBoundingClientRect().top;
+    }
+    else if(zoomMode) 
     {
     let startX = e.clientX;
     let startY = e.clientY;
@@ -157,6 +199,7 @@ document.addEventListener("DOMContentLoaded", () => {
     deactivateEraser();
     unclick("zoomin");
     zoomMode=false;
+    isMoveMode=false;
     click("brush-btn");
   };
 
@@ -166,6 +209,7 @@ document.addEventListener("DOMContentLoaded", () => {
     deactivateEraser();
     click("zoomin");
     unclick("brush-btn");
+    isMoveMode=false;
     if(!zoomMode){
         unclick("zoomin");
     }
@@ -176,6 +220,7 @@ document.addEventListener("DOMContentLoaded", () => {
     click("eraser");
     unclick("brush-btn");
     unclick("zoomin");
+    isMoveMode=false;
     eraserModeOn = true;
   }
 
