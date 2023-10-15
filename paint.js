@@ -1,7 +1,10 @@
 document.addEventListener("DOMContentLoaded", () => {
     console.log("DOM loaded");
+
+
     
     const canvas = document.getElementById("gl-canvas");
+
     if (!canvas.getContext) {
         alert("Your browser does not support canvas!");
         return;
@@ -23,19 +26,26 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     canvas.addEventListener('mousemove', draw);
-
+    function getMousePos(canvas, evt) {
+        var rect = canvas.getBoundingClientRect();
+        return {
+            x: evt.clientX - rect.left,
+            y: evt.clientY - rect.top
+        };
+    }
     function draw(e) {
         console.log("Mousemove event");
         if (!drawing) return;
-
+    
+        const pos = getMousePos(canvas, e);
+    
         ctx.lineWidth = 5;
         ctx.strokeStyle = 'black';
         
-        const { offsetX, offsetY } = e;
-
-        ctx.lineTo(offsetX, offsetY);
+        ctx.lineTo(pos.x, pos.y);
         ctx.stroke();
         ctx.beginPath();
-        ctx.moveTo(offsetX, offsetY);
+        ctx.moveTo(pos.x, pos.y);
     }
+    
 });
