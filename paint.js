@@ -2,7 +2,7 @@ document.addEventListener("DOMContentLoaded", () => {
     console.log("DOM loaded");
   
     var preferredColor = 'black';
-  
+    var eraserModeOn = false; 
     const canvas = document.getElementById("gl-canvas");
     const ctx = canvas.getContext("2d");
   
@@ -66,7 +66,27 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       }
     }
+    document.getElementById("eraser").onclick = function () {
+
+        activateEraser();
+    };
   
+    document.getElementById("brush-btn").onclick = function () {
+  
+        deactivateEraser();
+    };
+  
+    function activateEraser() {
+        click("eraser");
+        unclick("brush-btn");
+        eraserModeOn = true;
+    }
+
+    function deactivateEraser() {
+        click("brush-btn");
+        unclick("eraser");
+        eraserModeOn = false;
+    }
     function drawSquare(i, j) {
       const x = i * squareSize;
       const y = j * squareSize;
@@ -132,58 +152,58 @@ document.addEventListener("DOMContentLoaded", () => {
           break;
       }
       ctx.closePath();
-      ctx.fillStyle = preferredColor;
-      ctx.fill();
-      ctx.stroke();
+      if (eraserModeOn) {
+        ctx.globalCompositeOperation = 'destination-out';
+        ctx.fillStyle = "rgba(255,255,255,1)"; // using white to erase (with dest-out it becomes transparent)
+        ctx.fill();
+        ctx.globalCompositeOperation = 'source-over'; // Reset
+    } else {
+        ctx.fillStyle = preferredColor;
+        ctx.fill();
+        ctx.stroke();
     }
-  
+    }
     document.getElementById("cBtn0").onclick = function () {
-      stopEraser();
+        deactivateEraser();
       changeColor('#00FF00');
     };
   
     document.getElementById("cBtn1").onclick = function () {
-      stopEraser();
+        deactivateEraser();
       changeColor('red');
     };
   
     document.getElementById("cBtn2").onclick = function () {
-      stopEraser();
+        deactivateEraser();
       changeColor('yellow');
     };
   
     document.getElementById("cBtn3").onclick = function () {
-      stopEraser();
+        deactivateEraser();
       changeColor('black');
     };
   
     document.getElementById("cBtn4").onclick = function () {
-      stopEraser();
+        deactivateEraser();
       changeColor('orange');
     };
   
     document.getElementById("cBtn5").onclick = function () {
-      stopEraser();
+        deactivateEraser();
       changeColor('pink');
     };
   
     document.getElementById("cBtn6").onclick = function () {
-      stopEraser();
+        deactivateEraser();
       changeColor('cyan');
     };
   
     document.getElementById("cBtn7").onclick = function () {
-      stopEraser();
+        deactivateEraser();
       changeColor('magenta');
     };
   
-    function stopEraser() {
-      // eraserModeOn = false;
-      // if (currentmode == modes[3]) {
-      //   click("brush-btn");
-      //   unclick("eraser");
-      // }
-    }
+
   
     function unclick(id) {
       var element = document.getElementById(id);
