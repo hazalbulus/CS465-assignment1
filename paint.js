@@ -9,7 +9,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let panX = 0;
   let panY = 0;
   let zoom = 1;
-  let zoomMode=false;
+  let zoomMode = false;
 
   if (!ctx) {
     alert("Your browser does not support canvas!");
@@ -68,7 +68,8 @@ document.addEventListener("DOMContentLoaded", () => {
     };
   }
 
-  canvas.addEventListener("mousemove", function (e) { //çizmek için
+  canvas.addEventListener("mousemove", function (e) {
+    //çizmek için
     if (drawing) {
       const pos = getTransformedMousePos(canvas, e);
       const i = Math.floor(pos.x / squareSize);
@@ -101,10 +102,11 @@ document.addEventListener("DOMContentLoaded", () => {
     ctx.restore(); // Restore the original state
   }
 
-  canvas.addEventListener( //Yakınlaştırmak için
+  canvas.addEventListener(
+    //Yakınlaştırmak için
     "wheel",
     function (e) {
-        if(!zoomMode) return;
+      if (!zoomMode) return;
       e.preventDefault();
       const scaleFactor = 1.1;
       const cursorX = e.clientX - canvas.getBoundingClientRect().left;
@@ -129,7 +131,7 @@ document.addEventListener("DOMContentLoaded", () => {
     },
     { passive: false }
   );
- // Event Listeners
+  // Event Listeners
 
   canvas.addEventListener("mouseup", (event) => {
     if (isMoveMode && selectedImageData) {
@@ -151,28 +153,27 @@ document.addEventListener("DOMContentLoaded", () => {
     let startX = e.clientX;
     let startY = e.clientY;
 
-    function onMouseMove(e) {
-      const dx = e.clientX - startX;
-      const dy = e.clientY - startY;
-      panX += dx;
-      panY += dy;
+      function onMouseMove(e) {
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+        panX += dx;
+        panY += dy;
 
-      startX = e.clientX;
-      startY = e.clientY;
+        startX = e.clientX;
+        startY = e.clientY;
 
-       drawWithTransformations();
-    }
+        drawWithTransformations();
+      }
 
-    function onMouseUp() {
-      canvas.removeEventListener("mousemove", onMouseMove);
-      canvas.removeEventListener("mouseup", onMouseUp);
-    }
+      function onMouseUp() {
+        canvas.removeEventListener("mousemove", onMouseMove);
+        canvas.removeEventListener("mouseup", onMouseUp);
+      }
 
-    canvas.addEventListener("mousemove", onMouseMove);
-    canvas.addEventListener("mouseup", onMouseUp);}
-    else{
-        drawing = true;
-        
+      canvas.addEventListener("mousemove", onMouseMove);
+      canvas.addEventListener("mouseup", onMouseUp);
+    } else {
+      drawing = true;
     }
   });
 
@@ -184,13 +185,13 @@ document.addEventListener("DOMContentLoaded", () => {
     };
   }
 
-   function drawGrid() {
-     for (let i = 0; i < numSquares; i++) {
-       for (let j = 0; j < numSquares; j++) {
-         drawSquare(i, j);
-       }
-     }
-   }
+  function drawGrid() {
+    for (let i = 0; i < numSquares; i++) {
+      for (let j = 0; j < numSquares; j++) {
+        drawSquare(i, j);
+      }
+    }
+  }
   document.getElementById("eraser").onclick = function () {
     activateEraser();
   };
@@ -205,7 +206,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   document.getElementById("zoomin").onclick = function () {
     //toggle zoomin button
-    zoomMode=!zoomMode;
+    zoomMode = !zoomMode;
     deactivateEraser();
     click("zoomin");
     unclick("brush-btn");
@@ -216,7 +217,7 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   function activateEraser() {
-    zoomMode=false;
+    zoomMode = false;
     click("eraser");
     unclick("brush-btn");
     unclick("zoomin");
