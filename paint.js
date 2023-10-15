@@ -37,6 +37,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let startX, startY;
   let selectedImageData = null;
   let imgX, imgY, imgWidth, imgHeight;
+  
 
   document.getElementById("moveBtn").addEventListener("click", () => {
     isMoveMode = !isMoveMode;
@@ -110,14 +111,6 @@ document.addEventListener("DOMContentLoaded", () => {
     ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the canvas
     ctx.translate(panX, panY); // Move the canvas
     ctx.scale(zoom, zoom); // Zoom in/out
-    // All your drawing code comes here...
-    //drawGrid(); // Assuming this function draws your static grid
-
-    // Draw all triangles
-    // triangles.forEach(({ i, j, position, color }) => {
-    //   preferredColor = color; // Set the color for each triangle
-    //   drawTriangle(i, j, position); // Redraw each triangle
-    // });
 
     ctx.drawImage(buffer, 0, 0);
 
@@ -458,10 +451,12 @@ zoomMode = false;
     const img = new Image();
     img.src = imgData;
     img.onload = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(img, 0, 0);
+      bufferCtx.clearRect(0, 0, buffer.width, buffer.height);
+      bufferCtx.drawImage(img, 0, 0);
+      drawWithTransformations(); // Ensure to reflect changes on the main canvas
     };
   }
+  
 
   // Event listeners for buttons
   document.getElementById("undo").addEventListener("click", undo);
