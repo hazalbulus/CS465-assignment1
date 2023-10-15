@@ -3,14 +3,18 @@
     height: 90vh;  /* Adjusts the height to full viewport height */
 }
 
-.left-half, .right-half {
+.right-half {
     height: 100%;
     box-sizing: border-box; /* Makes sure padding does not add to the width */
 }
 
 .left-half {
-    width: 75%;
+    width: 1905px;
+    height: 1070px;
+
     background-color: white; /* Makes left-half background white */
+  box-sizing: border-box; /* Makes sure padding does not add to the width */
+
 }
 
 .right-half {
