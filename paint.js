@@ -62,7 +62,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let indices = [];
   let colors = [];
   
-  document.getElementById("moveBtn").addEventListener("click", () => {
+  document.getElementById("copyBtn").addEventListener("click", () => {
     isMoveMode = !isMoveMode;
     isSelecting = !isSelecting;
     drawing = false;
