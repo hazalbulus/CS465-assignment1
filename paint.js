@@ -3,9 +3,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
   var preferredColor = "black";
   var eraserModeOn = false;
+  var allpoints = [];
+
   const canvas = document.getElementById("gl-canvas");
   const ctx = canvas.getContext("2d");
   const MOVABLE_AREA_SIZE = 100;
+  const fileBtn = document.getElementById("up-file");
+  const uploadTxt = document.getElementById("txt");
+
+  var crtLayer = 1;
+  var layers = [1,2,3];
+  var moveOn = false;
+  var first = true;
+  var t1, t2, t3;
 
   let buffer = document.createElement("canvas");
   let bufferCtx = buffer.getContext("2d");
@@ -39,7 +49,10 @@ document.addEventListener("DOMContentLoaded", () => {
   let selectedImageData = null;
   let imgX, imgY, imgWidth, imgHeight;
   
-
+  let vertices = [];
+  let indices = [];
+  let colors = [];
+  
   document.getElementById("moveBtn").addEventListener("click", () => {
     isMoveMode = !isMoveMode;
     if (isMoveMode) {
@@ -422,6 +435,162 @@ zoomMode = false;
     changeColor("magenta");
   };
 
+  document.getElementById("lay1").onchange = function() {
+    var rds = document.querySelectorAll('input[name="rad"]');
+    for(var i = 0; i < 4; i++){
+        if(rds[i].checked == true){
+            crtLayer = rds[i].value;
+            break;
+        }
+    }
+    console.log("crtlayer select: " + crtLayer);
+}
+
+document.getElementById("lay2").onchange = function() {
+    var rds = document.querySelectorAll('input[name="rad"]');
+    for(var i = 0; i < 4; i++){
+        if(rds[i].checked == true){
+            crtLayer = rds[i].value;
+            break;
+        }
+    }
+    console.log("crtlayer select: " + crtLayer);
+}
+
+document.getElementById("lay3").onchange = function() {
+    var rds = document.querySelectorAll('input[name="rad"]');
+    for(var i = 0; i < 4; i++){
+        if(rds[i].checked == true){
+            crtLayer = rds[i].value;
+            break;
+        }
+    }
+    console.log("crtlayer select: " + crtLayer);
+}
+document.getElementById("aboveBtn").onclick = function() {
+  var crtLoc = findLayerLoc(crtLayer);
+  if(crtLoc!=0){
+      var rbs = document.querySelectorAll('input[name="rad"]');
+      rbs[crtLoc].checked = false;
+      rbs[crtLoc - 1].checked = true;
+      var tempval = rbs[crtLoc].value;
+      rbs[crtLoc].value = rbs[crtLoc - 1].value;
+      rbs[crtLoc - 1].value = tempval;
+      var first = (layers[crtLoc]).toString();
+      var second = (layers[crtLoc - 1]).toString();
+      document.getElementById(crtLoc + 1).innerHTML="Layer " + second;
+      document.getElementById(crtLoc).innerHTML="Layer " + first;
+      var loc = layers[crtLoc - 1];
+      layers[crtLoc - 1] = layers[crtLoc];
+      layers[crtLoc] = loc;
+
+      var crtz = ((crtLoc)*0.25) - 0.99;
+      var nextz = ((crtLoc - 1)*0.25) - 0.99;
+      console.log("crt: " + crtz + "next: " + nextz);
+      for(var i = 0; i < points.length; i++){
+          if(points[i][2] == crtz){
+              points[i][2] = nextz;
+          } else if(points[i][2] == nextz){
+              points[i][2] = crtz;
+          }
+      }
+      for(var i = 0; i < allpoints.length; i++){
+          if(allpoints[i][2] == crtz){
+              allpoints[i][2] = nextz;
+          } else if(allpoints[i][2] == nextz){
+              allpoints[i][2] = crtz;
+          }
+      }
+      gl.bindBuffer( gl.ARRAY_BUFFER, vBuffer );
+      gl.bufferSubData(gl.ARRAY_BUFFER, 0, flatten(allpoints.concat(points)));
+      render();
+  }
+}
+
+document.getElementById("belowBtn").onclick = function() {
+  var crtLoc = findLayerLoc(crtLayer);
+  if(crtLoc!=2){
+      var rbs = document.querySelectorAll('input[name="rad"]');
+      rbs[crtLoc].checked = false;
+      rbs[crtLoc + 1].checked = true;
+      var tempval = rbs[crtLoc].value;
+      rbs[crtLoc].value = rbs[crtLoc + 1].value;
+      rbs[crtLoc + 1].value = tempval;
+      var first = (layers[crtLoc]).toString();
+      var second = (layers[crtLoc + 1]).toString();
+      document.getElementById(crtLoc + 1).innerHTML="Layer " + second;
+      document.getElementById(crtLoc + 2).innerHTML="Layer " + first;
+      var loc = layers[crtLoc + 1];
+      layers[crtLoc + 1] = layers[crtLoc];
+      layers[crtLoc] = loc;
+
+      var crtz = ((crtLoc)*0.25) - 0.99;
+      var nextz = ((crtLoc + 1)*0.25) - 0.99;
+      console.log("crt: " + crtz + "next: " + nextz);
+      for(var i = 0; i < points.length; i++){
+          if(points[i][2] == crtz){
+              points[i][2] = nextz;
+          } else if(points[i][2] == nextz){
+              points[i][2] = crtz;
+          }
+      }
+      for(var i = 0; i < allpoints.length; i++){
+          if(allpoints[i][2] == crtz){
+              allpoints[i][2] = nextz;
+          } else if(allpoints[i][2] == nextz){
+              allpoints[i][2] = crtz;
+          }
+      }
+      gl.bindBuffer( gl.ARRAY_BUFFER, vBuffer );
+      gl.bufferSubData(gl.ARRAY_BUFFER, 0, flatten(allpoints.concat(points)));
+      render();
+  }
+}
+
+document.getElementById("saveBtn").onclick = function () {
+  const blob = new Blob([JSON.stringify(triangles)], {type: "text/plain"});
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'saved.txt';
+  a.click("brush-btn");
+
+  URL.revokeObjectURL(url);
+
+
+};
+fileBtn.addEventListener("change",  function () {
+  if(fileBtn.value){
+      uploadTxt.innerHTML = fileBtn.value.match(/[\/\\]([\w\d\s\.\-\(\)]+)$/)[1];
+  } else {
+      uploadTxt.innerHTML = "No file chosen, yet!";
+  }
+});
+
+document.getElementById("selectBtn").onclick = function () {
+  fileBtn.click("brush-btn");
+}
+
+document.getElementById("uplBtn").onclick = function () {
+  const file = document.getElementById('up-file').files[0];
+    
+  const reader = new FileReader();
+  reader.onload = function(event) {
+      const loadedTriangles = JSON.parse(event.target.result);
+
+      // Clear your triangles array and canvas here if necessary
+      triangles.length = 0;
+      // [clear canvas logic, e.g., `targetCtx.clearRect(...)`]
+
+      // Redraw the triangles
+      for (const triangle of loadedTriangles) {
+          drawTriangle(triangle.i, triangle.j, triangle.position, targetCtx);
+          triangles.push(triangle);
+      }
+  };
+  reader.readAsText(file);
+};
   function unclick(id) {
     var element = document.getElementById(id);
     element.classList.remove("clicked");
@@ -477,7 +646,13 @@ zoomMode = false;
       drawWithTransformations(); // Ensure to reflect changes on the main canvas
     };
   }
-  
+  function findLayerLoc(crt){
+    for(var i = 0; i < 3; i++){
+        if(layers[i] == crt)
+            return i;
+    }
+    return -1;
+}
 
   // Event listeners for buttons
   document.getElementById("undo").addEventListener("click", undo);
