@@ -5,6 +5,7 @@ document.addEventListener("DOMContentLoaded", () => {
   var eraserModeOn = false;
   const canvas = document.getElementById("gl-canvas");
   const ctx = canvas.getContext("2d");
+  const MOVABLE_AREA_SIZE = 100;
 
   let buffer = document.createElement("canvas");
   let bufferCtx = buffer.getContext("2d");
@@ -45,6 +46,7 @@ document.addEventListener("DOMContentLoaded", () => {
       canvas.style.cursor = "move";
       unclick("brush-btn");
       unclick("zoomin");
+      zoomMode = false;
       deactivateEraser();
     } else {
       canvas.style.cursor = "default";
@@ -53,17 +55,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
   canvas.addEventListener("mousemove", (event) => {
     if (isMoveMode && selectedImageData) {
-      const x = event.clientX - canvas.getBoundingClientRect().left;
-      const y = event.clientY - canvas.getBoundingClientRect().top;
+      const x = event.clientX - canvas.getBoundingClientRect().left - imgWidth / 2;
+      const y = event.clientY - canvas.getBoundingClientRect().top - imgHeight / 2;
 
       bufferCtx.clearRect(imgX, imgY, imgWidth, imgHeight); // Clear the previous drawn image
-      // Draw other elements, like grid, etc.
-      // drawGrid();
-
       bufferCtx.putImageData(selectedImageData, x, y); // Draw at the new position
+
       imgX = x;
       imgY = y;
-    }
+
+      // After each draw operation, update the visible canvas
+      drawWithTransformations();
+  }
   });
 
   function getTransformedMousePos(canvas, evt) {
@@ -150,20 +153,20 @@ document.addEventListener("DOMContentLoaded", () => {
 
   canvas.addEventListener("mouseup", (event) => {
     if (isMoveMode && selectedImageData) {
-      const endX = event.clientX - canvas.getBoundingClientRect().left;
-      const endY = event.clientY - canvas.getBoundingClientRect().top;
-      imgX = endX;
-      imgY = endY;
-    }
+      // Now that we've finalized the move, we'll reset our selectedImageData
+      selectedImageData = null;
+      
+      // save the state after the move
+      saveState();
+  }
+  else{
     drawing = false;
     saveState();
+  }
   });
   canvas.addEventListener("mousedown", function (e) {
     //Sürüklemek için
-    if (isMoveMode) {
-      startX = e.clientX - canvas.getBoundingClientRect().left;
-      startY = e.clientY - canvas.getBoundingClientRect().top;
-    } else if (zoomMode) {
+  if (zoomMode) {
       let startX = e.clientX;
       let startY = e.clientY;
 
@@ -186,7 +189,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
       canvas.addEventListener("mousemove", onMouseMove);
       canvas.addEventListener("mouseup", onMouseUp);
-    } else {
+    } 
+    else if (isMoveMode) {
+      startX = e.clientX - canvas.getBoundingClientRect().left;
+      startY = e.clientY - canvas.getBoundingClientRect().top;
+      
+      imgWidth = MOVABLE_AREA_SIZE;
+      imgHeight = MOVABLE_AREA_SIZE;
+      imgX = startX - imgWidth / 2;
+      imgY = startY - imgHeight / 2;
+      
+      selectedImageData = bufferCtx.getImageData(imgX, imgY, imgWidth, imgHeight);
+  }else {
       drawing = true;
     }
   });
@@ -330,6 +344,7 @@ document.addEventListener("DOMContentLoaded", () => {
     unclick("zoomin");
     changeColor("#00FF00");
     click("brush-btn");
+    isMoveMode = false;
 
     zoomMode = false;
 
@@ -340,6 +355,7 @@ document.addEventListener("DOMContentLoaded", () => {
     changeColor("red");
     unclick("zoomin");
     click("brush-btn");
+    isMoveMode = false;
 
     zoomMode = false;
 
@@ -351,6 +367,7 @@ document.addEventListener("DOMContentLoaded", () => {
     unclick("zoomin");
     zoomMode = false;
     click("brush-btn");
+    isMoveMode = false;
 
     changeColor("yellow");
   };
@@ -359,6 +376,7 @@ document.addEventListener("DOMContentLoaded", () => {
     deactivateEraser();
     unclick("zoomin");
     click("brush-btn");
+    isMoveMode = false;
 
     zoomMode = false;
 
@@ -370,6 +388,7 @@ document.addEventListener("DOMContentLoaded", () => {
     unclick("zoomin");
     click("brush-btn");
     zoomMode = false;
+    isMoveMode = false;
 
     changeColor("orange");
   };
@@ -379,6 +398,7 @@ document.addEventListener("DOMContentLoaded", () => {
     click("brush-btn");
     unclick("zoomin");
     zoomMode = false;
+    isMoveMode = false;
 
     changeColor("pink");
   };
@@ -387,6 +407,7 @@ document.addEventListener("DOMContentLoaded", () => {
     deactivateEraser();
     unclick("zoomin");
     click("brush-btn");
+    isMoveMode = false;
 
 zoomMode = false;
     changeColor("cyan");
