@@ -101,11 +101,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
       // Determine which triangle to fill
       if (relX > relY) {
-        if (squareSize - relX > relY) drawTriangle(i, j, "top", bufferCtx);
-        else drawTriangle(i, j, "right", bufferCtx);
+        if (squareSize - relX > relY) drawTriangle(i, j, "top", bufferCtx, preferredColor);
+        else drawTriangle(i, j, "right", bufferCtx, preferredColor);
       } else {
-        if (squareSize - relX > relY) drawTriangle(i, j, "left", bufferCtx);
-        else drawTriangle(i, j, "bottom", bufferCtx);
+        if (squareSize - relX > relY) drawTriangle(i, j, "left", bufferCtx, preferredColor);
+
+        else drawTriangle(i, j, "bottom", bufferCtx, preferredColor);
       }
       afterDrawing();
     }
@@ -306,47 +307,58 @@ document.addEventListener("DOMContentLoaded", () => {
     targetCtx.stroke();
   }
 
-  function drawTriangle(i, j, position, targetCtx) {
-    triangles.push({ i, j, position, color: preferredColor });
+  function drawTriangle(i, j, position, targetCtx, color) {
     const x = i * squareSize;
     const y = j * squareSize;
     const halfSize = squareSize / 2;
 
+    if (eraserModeOn) {
+        // Find the triangle in the triangles array that matches i, j, and position
+        const triangleIndex = triangles.findIndex(triangle => 
+            triangle.i === i && triangle.j === j && triangle.position === position && triangle.color === color
+        );
+
+        // Remove the triangle from the triangles array
+        if (triangleIndex !== -1) {
+            triangles.splice(triangleIndex, 1);
+        }
+
+        // Clear that triangle on the canvas
+        targetCtx.globalCompositeOperation = "destination-out";
+        targetCtx.fillStyle = "rgba(255,255,255,1)"; // using white to erase (with dest-out it becomes transparent)
+    } else {
+        triangles.push({ i, j, position, color: color || preferredColor });
+        targetCtx.fillStyle = color || preferredColor;
+    }
+
     targetCtx.beginPath();
     switch (position) {
-      case "top":
-        targetCtx.moveTo(x, y);
-        targetCtx.lineTo(x + squareSize, y);
-        targetCtx.lineTo(x + halfSize, y + halfSize);
-        break;
-      case "right":
-        targetCtx.moveTo(x + squareSize, y);
-        targetCtx.lineTo(x + squareSize, y + squareSize);
-        targetCtx.lineTo(x + halfSize, y + halfSize);
-        break;
-      case "bottom":
-        targetCtx.moveTo(x, y + squareSize);
-        targetCtx.lineTo(x + squareSize, y + squareSize);
-        targetCtx.lineTo(x + halfSize, y + halfSize);
-        break;
-      case "left":
-        targetCtx.moveTo(x, y);
-        targetCtx.lineTo(x, y + squareSize);
-        targetCtx.lineTo(x + halfSize, y + halfSize);
-        break;
+        case "top":
+            targetCtx.moveTo(x, y);
+            targetCtx.lineTo(x + squareSize, y);
+            targetCtx.lineTo(x + halfSize, y + halfSize);
+            break;
+        case "right":
+            targetCtx.moveTo(x + squareSize, y);
+            targetCtx.lineTo(x + squareSize, y + squareSize);
+            targetCtx.lineTo(x + halfSize, y + halfSize);
+            break;
+        case "bottom":
+            targetCtx.moveTo(x, y + squareSize);
+            targetCtx.lineTo(x + squareSize, y + squareSize);
+            targetCtx.lineTo(x + halfSize, y + halfSize);
+            break;
+        case "left":
+            targetCtx.moveTo(x, y);
+            targetCtx.lineTo(x, y + squareSize);
+            targetCtx.lineTo(x + halfSize, y + halfSize);
+            break;
     }
     targetCtx.closePath();
-    if (eraserModeOn) {
-      targetCtx.globalCompositeOperation = "destination-out";
-      targetCtx.fillStyle = "rgba(255,255,255,1)"; // using white to erase (with dest-out it becomes transparent)
-      targetCtx.fill();
-      targetCtx.globalCompositeOperation = "source-over"; // Reset
-    } else {
-      targetCtx.fillStyle = preferredColor;
-      targetCtx.fill();
-      //targetCtx.stroke();
-    }
-  }
+    targetCtx.fill();
+    targetCtx.globalCompositeOperation = "source-over"; // Reset
+}
+
 
   // After each draw operation, ensure to update the visible canvas
   function afterDrawing() {
@@ -570,27 +582,35 @@ fileBtn.addEventListener("change",  function () {
 
 document.getElementById("selectBtn").onclick = function () {
   fileBtn.click("brush-btn");
+  // document.getElementById("up-file").click();  // Trigger file input's click
 }
 
-document.getElementById("uplBtn").onclick = function () {
-  const file = document.getElementById('up-file').files[0];
-    
+document.getElementById("up-file").addEventListener('change', function(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  
   const reader = new FileReader();
   reader.onload = function(event) {
-      const loadedTriangles = JSON.parse(event.target.result);
+    const loadedTriangles = JSON.parse(event.target.result);
+
+      console.log(loadedTriangles);
 
       // Clear your triangles array and canvas here if necessary
       triangles.length = 0;
-      // [clear canvas logic, e.g., `targetCtx.clearRect(...)`]
+      ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+      bufferCtx.clearRect(0, 0, bufferCtx.canvas.width, bufferCtx.canvas.height);
 
       // Redraw the triangles
       for (const triangle of loadedTriangles) {
-          drawTriangle(triangle.i, triangle.j, triangle.position, targetCtx);
+        drawTriangle(triangle.i, triangle.j, triangle.position, ctx, triangle.color);
+          drawTriangle(triangle.i, triangle.j, triangle.position, bufferCtx, triangle.color);
+
+
           triangles.push(triangle);
       }
   };
   reader.readAsText(file);
-};
+});
   function unclick(id) {
     var element = document.getElementById(id);
     element.classList.remove("clicked");
