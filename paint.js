@@ -1,12 +1,15 @@
 document.addEventListener("DOMContentLoaded", () => {
   console.log("DOM loaded");
 
+  let isSelected = false; // if a rectangular area is selected
+  let isDragging = false; // if we're currently dragging the selected area
+
   var preferredColor = "black";
   var eraserModeOn = false;
   var allpoints = [];
 
   const canvas = document.getElementById("gl-canvas");
-  const ctx = canvas.getContext("2d");
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
   const MOVABLE_AREA_SIZE = 100;
   const fileBtn = document.getElementById("up-file");
   const uploadTxt = document.getElementById("txt");
@@ -16,6 +19,8 @@ document.addEventListener("DOMContentLoaded", () => {
   var moveOn = false;
   var first = true;
   var t1, t2, t3;
+
+  let canvasBuffer;
 
   let buffer = document.createElement("canvas");
   let bufferCtx = buffer.getContext("2d");
@@ -27,6 +32,10 @@ document.addEventListener("DOMContentLoaded", () => {
   let panY = 0;
   let zoom = 1;
   let zoomMode = false;
+
+  let isSelecting = false;
+  let selectionRect = { startX: 0, startY: 0, endX: 0, endY: 0 };
+  let lastPos = { x: 0, y: 0 };
 
   let triangles = [];
 
@@ -55,11 +64,15 @@ document.addEventListener("DOMContentLoaded", () => {
   
   document.getElementById("moveBtn").addEventListener("click", () => {
     isMoveMode = !isMoveMode;
+    isSelecting = !isSelecting;
+    drawing = false;
     if (isMoveMode) {
-      canvas.style.cursor = "move";
       unclick("brush-btn");
       unclick("zoomin");
+      isSelecting = true;
+      canvas.style.cursor = "move";
       zoomMode = false;
+      drawing = false;
       deactivateEraser();
     } else {
       canvas.style.cursor = "default";
@@ -67,19 +80,31 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   canvas.addEventListener("mousemove", (event) => {
-    if (isMoveMode && selectedImageData) {
-      const x = event.clientX - canvas.getBoundingClientRect().left - imgWidth / 2;
-      const y = event.clientY - canvas.getBoundingClientRect().top - imgHeight / 2;
+    if (isMoveMode) {
+      if (isSelecting) {
+        selectionRect.endX = event.clientX - canvas.offsetLeft;
+        selectionRect.endY = event.clientY - canvas.offsetTop;
+        drawWithTransformations();
+      } else if (isDragging && selectedImageData) {
+        console.log(
+          "isSelecting false and inside the selectedImageData scope!"
+        );
+        let dx = (event.clientX - canvas.offsetLeft - lastPos.x) / zoom;
+        let dy = (event.clientY - canvas.offsetTop - lastPos.y) / zoom;
 
-      bufferCtx.clearRect(imgX, imgY, imgWidth, imgHeight); // Clear the previous drawn image
-      bufferCtx.putImageData(selectedImageData, x, y); // Draw at the new position
+        imgX += dx;
+        imgY += dy;
 
-      imgX = x;
-      imgY = y;
+        bufferCtx.putImageData(canvasBuffer, 0, 0);
+        bufferCtx.putImageData(selectedImageData, imgX, imgY);
 
-      // After each draw operation, update the visible canvas
-      drawWithTransformations();
-  }
+        lastPos.x = event.clientX - canvas.offsetLeft;
+        lastPos.y = event.clientY - canvas.offsetTop;
+
+        isSelecting = false;
+        drawWithTransformations();
+      }
+    }
   });
 
   function getTransformedMousePos(canvas, evt) {
@@ -123,15 +148,64 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function drawWithTransformations() {
+    // console.log("Move mode: " + isMoveMode);
+    // console.log("Selecting mode: " + isSelecting);
     ctx.save(); // Save the current state
-    //saveState();
     ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the canvas
     ctx.translate(panX, panY); // Move the canvas
     ctx.scale(zoom, zoom); // Zoom in/out
 
+    // Draw all the drawings that are not selected.
+    for (let drawing of selectedDrawings) {
+      if (!selectedDrawings.includes(drawing)) {
+        drawDrawing(drawing);
+      }
+    }
+
+    // Draw the buffer.
     ctx.drawImage(buffer, 0, 0);
 
+    // Draw the selected drawings on top.
+    for (let drawing of selectedDrawings) {
+      drawDrawing(drawing);
+    }
+
     ctx.restore(); // Restore the original state
+
+    if (isSelecting) {
+      ctx.strokeStyle = "black";
+      ctx.fillStyle = "black";
+      ctx.fill();
+      ctx.strokeRect(
+        selectionRect.startX,
+        selectionRect.startY,
+        selectionRect.endX - selectionRect.startX,
+        selectionRect.endY - selectionRect.startY
+      );
+    }
+  }
+
+  function drawDrawing(drawing) {
+    ctx.save();
+    ctx.translate(drawing.x, drawing.y);
+    ctx.rotate(drawing.rotation);
+    ctx.translate(-drawing.x, -drawing.y);
+
+    // Use the properties of the drawing object to determine how to render it.
+    const i = Math.floor(drawing.x / squareSize);
+    const j = Math.floor(drawing.y / squareSize);
+    const relX = drawing.x - i * squareSize;
+    const relY = drawing.y - j * squareSize;
+
+    if (relX > relY) {
+      if (squareSize - relX > relY) drawTriangle(i, j, "top", bufferCtx);
+      else drawTriangle(i, j, "right", bufferCtx);
+    } else {
+      if (squareSize - relX > relY) drawTriangle(i, j, "left", bufferCtx);
+      else drawTriangle(i, j, "bottom", bufferCtx);
+    }
+
+    ctx.restore();
   }
 
   canvas.addEventListener(
@@ -166,21 +240,45 @@ document.addEventListener("DOMContentLoaded", () => {
   // Event Listeners
 
   canvas.addEventListener("mouseup", (event) => {
-    if (isMoveMode && selectedImageData) {
-      // Now that we've finalized the move, we'll reset our selectedImageData
+    if (isMoveMode && isSelecting) {
+      isSelecting = false;
+      isSelected = true;
+      // Store the position and dimensions of the selected area
+      imgX = Math.min(selectionRect.startX, selectionRect.endX);
+      imgY = Math.min(selectionRect.startY, selectionRect.endY);
+      imgWidth = Math.abs(selectionRect.endX - selectionRect.startX);
+      imgHeight = Math.abs(selectionRect.endY - selectionRect.startY);
+
+      if (imgWidth > 0 && imgHeight > 0) {
+        // check if the selected area has a valid size
+        selectedImageData = ctx.getImageData(imgX, imgY, imgWidth, imgHeight);
+        console.log("selectedImageData: " + selectedImageData);
+      }
+
+      if (isSelecting) {
+        selectionRect.endX = event.clientX - canvas.offsetLeft;
+        selectionRect.endY = event.clientY - canvas.offsetTop;
+      }
+      isSelecting = false;
+      drawWithTransformations();
+    } else if (isMoveMode && isDragging) {
+      isDragging = false;
+      isSelected = false;
+      isSelecting = false;
       selectedImageData = null;
-      
-      // save the state after the move
+      drawWithTransformations();
       saveState();
-  }
-  else{
-    drawing = false;
-    saveState();
-  }
+    } else {
+      drawing = false;
+      saveState();
+    }
   });
+
   canvas.addEventListener("mousedown", function (e) {
+    console.log("mousedown içinde isMoveMode: " + isMoveMode);
+    console.log("mousedown içinde isSelecting: " + isSelecting);
     //Sürüklemek için
-  if (zoomMode) {
+    if (zoomMode) {
       let startX = e.clientX;
       let startY = e.clientY;
 
@@ -203,21 +301,48 @@ document.addEventListener("DOMContentLoaded", () => {
 
       canvas.addEventListener("mousemove", onMouseMove);
       canvas.addEventListener("mouseup", onMouseUp);
-    } 
-    else if (isMoveMode) {
-      startX = e.clientX - canvas.getBoundingClientRect().left;
-      startY = e.clientY - canvas.getBoundingClientRect().top;
-      
-      imgWidth = MOVABLE_AREA_SIZE;
-      imgHeight = MOVABLE_AREA_SIZE;
-      imgX = startX - imgWidth / 2;
-      imgY = startY - imgHeight / 2;
-      
-      selectedImageData = bufferCtx.getImageData(imgX, imgY, imgWidth, imgHeight);
-  }else {
+    } else if (isMoveMode && !e.shiftKey) {
+      if (!isSelected) {
+        // Starting a new selection
+        isSelecting = false;
+        drawWithTransformations();
+        isSelecting = true;
+        selectionRect.startX = e.clientX - canvas.offsetLeft;
+        selectionRect.startY = e.clientY - canvas.offsetTop;
+      } else {
+        // Starting to move the selected area
+        isSelecting = false;
+        canvasBuffer = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        isDragging = true;
+        lastPos.x = e.clientX - canvas.offsetLeft;
+        lastPos.y = e.clientY - canvas.offsetTop;
+        drawWithTransformations();
+      }
+    } else {
       drawing = true;
     }
   });
+
+  let selectedDrawings = [];
+
+  function selectDrawings() {
+    selectedDrawings = []; // Clear previous selection
+
+    for (let drawing of drawings) {
+      if (isInsideSelectionRect(drawing)) {
+        selectedDrawings.push(drawing);
+      }
+    }
+  }
+
+  function isInsideSelectionRect(drawing) {
+    return (
+      drawing.x >= Math.min(selectionRect.startX, selectionRect.endX) &&
+      drawing.y >= Math.min(selectionRect.startY, selectionRect.endY) &&
+      drawing.x <= Math.max(selectionRect.startX, selectionRect.endX) &&
+      drawing.y <= Math.max(selectionRect.startY, selectionRect.endY)
+    );
+  }
 
   function getMousePos(canvas, evt) {
     const rect = canvas.getBoundingClientRect();
@@ -243,6 +368,7 @@ document.addEventListener("DOMContentLoaded", () => {
     unclick("zoomin");
     zoomMode = false;
     isMoveMode = false;
+    isSelecting = false;
     click("brush-btn");
   };
 
@@ -253,6 +379,7 @@ document.addEventListener("DOMContentLoaded", () => {
     click("zoomin");
     unclick("brush-btn");
     isMoveMode = false;
+    isSelecting = false;
     if (!zoomMode) {
       unclick("zoomin");
     }
@@ -265,6 +392,7 @@ document.addEventListener("DOMContentLoaded", () => {
     unclick("zoomin");
     isMoveMode = false;
     eraserModeOn = true;
+    isSelecting = false;
   }
 
   function deactivateEraser() {
@@ -370,9 +498,8 @@ document.addEventListener("DOMContentLoaded", () => {
     changeColor("#00FF00");
     click("brush-btn");
     isMoveMode = false;
-
+    isSelecting = false;
     zoomMode = false;
-
   };
 
   document.getElementById("cBtn1").onclick = function () {
@@ -381,10 +508,8 @@ document.addEventListener("DOMContentLoaded", () => {
     unclick("zoomin");
     click("brush-btn");
     isMoveMode = false;
-
+    isSelecting = false;
     zoomMode = false;
-
-
   };
 
   document.getElementById("cBtn2").onclick = function () {
@@ -393,7 +518,7 @@ document.addEventListener("DOMContentLoaded", () => {
     zoomMode = false;
     click("brush-btn");
     isMoveMode = false;
-
+    isSelecting = false;
     changeColor("yellow");
   };
 
@@ -402,7 +527,7 @@ document.addEventListener("DOMContentLoaded", () => {
     unclick("zoomin");
     click("brush-btn");
     isMoveMode = false;
-
+    isSelecting = false;
     zoomMode = false;
 
     changeColor("black");
@@ -414,7 +539,7 @@ document.addEventListener("DOMContentLoaded", () => {
     click("brush-btn");
     zoomMode = false;
     isMoveMode = false;
-
+    isSelecting = false;
     changeColor("orange");
   };
 
@@ -424,7 +549,7 @@ document.addEventListener("DOMContentLoaded", () => {
     unclick("zoomin");
     zoomMode = false;
     isMoveMode = false;
-
+    isSelecting = false;
     changeColor("pink");
   };
 
@@ -433,8 +558,8 @@ document.addEventListener("DOMContentLoaded", () => {
     unclick("zoomin");
     click("brush-btn");
     isMoveMode = false;
-
-zoomMode = false;
+    isSelecting = false;
+    zoomMode = false;
     changeColor("cyan");
   };
 
@@ -442,7 +567,7 @@ zoomMode = false;
     deactivateEraser();
     unclick("zoomin");
     click("brush-btn");
-
+    isMoveMode = false;
     zoomMode = false;
     changeColor("magenta");
   };
