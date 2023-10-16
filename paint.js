@@ -15,7 +15,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const uploadTxt = document.getElementById("txt");
 
   var crtLayer = 1;
-  var layers = [1,2,3];
+  var layers = [1, 2, 3];
   var moveOn = false;
   var first = true;
   var t1, t2, t3;
@@ -53,20 +53,42 @@ document.addEventListener("DOMContentLoaded", () => {
   const numSquares = 60; // number of squares per row/column
   const squareSize = canvas.width / numSquares;
 
+  let isCopyMode = false;
   let isMoveMode = false;
   let startX, startY;
   let selectedImageData = null;
   let imgX, imgY, imgWidth, imgHeight;
-  
+
   let vertices = [];
   let indices = [];
   let colors = [];
-  
+
   document.getElementById("copyBtn").addEventListener("click", () => {
+    isCopyMode = true;
     isMoveMode = !isMoveMode;
     isSelecting = !isSelecting;
     drawing = false;
+    if (isCopyMode) {
+      isMoveMode = false;
+      unclick("brush-btn");
+      unclick("zoomin");
+      isSelecting = true;
+      canvas.style.cursor = "move";
+      zoomMode = false;
+      drawing = false;
+      deactivateEraser();
+    } else {
+      canvas.style.cursor = "default";
+    }
+  });
+
+  document.getElementById("moveBtn").addEventListener("click", () => {
+    isCopyMode = !isCopyMode;
+    isMoveMode = true;
+    isSelecting = !isSelecting;
+    drawing = false;
     if (isMoveMode) {
+      isCopyMode = false;
       unclick("brush-btn");
       unclick("zoomin");
       isSelecting = true;
@@ -80,6 +102,35 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   canvas.addEventListener("mousemove", (event) => {
+    if (isCopyMode) {
+      if (isSelecting) {
+        selectionRect.endX = event.clientX - canvas.offsetLeft;
+        selectionRect.endY = event.clientY - canvas.offsetTop;
+        drawWithTransformations();
+      } else if (isDragging && selectedImageData) {
+        console.log(
+          "isSelecting false and inside the selectedImageData scope!"
+        );
+        let dx = (event.clientX - canvas.offsetLeft - lastPos.x) / zoom;
+        let dy = (event.clientY - canvas.offsetTop - lastPos.y) / zoom;
+
+        imgX += dx;
+        imgY += dy;
+
+        if (isCopyMode) {
+          bufferCtx.putImageData(canvasBuffer, 0, 0); // Draw the original canvas
+        } else {
+          ctx.clearRect(imgX - dx, imgY - dy, imgWidth, imgHeight); // Clear the previous position of selected area
+        }
+        bufferCtx.putImageData(selectedImageData, imgX, imgY);
+
+        lastPos.x = event.clientX - canvas.offsetLeft;
+        lastPos.y = event.clientY - canvas.offsetTop;
+
+        isSelecting = false;
+        drawWithTransformations();
+      }
+    }
     if (isMoveMode) {
       if (isSelecting) {
         selectionRect.endX = event.clientX - canvas.offsetLeft;
@@ -126,29 +177,30 @@ document.addEventListener("DOMContentLoaded", () => {
 
       // Determine which triangle to fill
       if (relX > relY) {
-        if (squareSize - relX > relY) drawTriangle(i, j, "top", bufferCtx, preferredColor);
+        if (squareSize - relX > relY)
+          drawTriangle(i, j, "top", bufferCtx, preferredColor);
         else drawTriangle(i, j, "right", bufferCtx, preferredColor);
       } else {
-        if (squareSize - relX > relY) drawTriangle(i, j, "left", bufferCtx, preferredColor);
-
+        if (squareSize - relX > relY)
+          drawTriangle(i, j, "left", bufferCtx, preferredColor);
         else drawTriangle(i, j, "bottom", bufferCtx, preferredColor);
       }
       afterDrawing();
     }
   });
 
-  function updateBufferAndDraw() {
-    bufferCtx.clearRect(0, 0, buffer.width, buffer.height);
+  //   function updateBufferAndDraw() {
+  //     bufferCtx.clearRect(0, 0, buffer.width, buffer.height);
 
-    // Update your offscreen canvas as needed here. E.g., draw the grid, shapes, etc.
-    drawGrid();
+  //     // Update your offscreen canvas as needed here. E.g., draw the grid, shapes, etc.
+  //     drawGrid();
 
-    // Draw the updated buffer on the main canvas
-    drawWithTransformations();
-  }
+  //     // Draw the updated buffer on the main canvas
+  //     drawWithTransformations();
+  //   }
 
   function drawWithTransformations() {
-    // console.log("Move mode: " + isMoveMode);
+    // console.log("Move mode: " + isCopyMode);
     // console.log("Selecting mode: " + isSelecting);
     ctx.save(); // Save the current state
     ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the canvas
@@ -240,7 +292,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // Event Listeners
 
   canvas.addEventListener("mouseup", (event) => {
-    if (isMoveMode && isSelecting) {
+    if ((isCopyMode || isMoveMode) && isSelecting) {
       isSelecting = false;
       isSelected = true;
       // Store the position and dimensions of the selected area
@@ -261,12 +313,23 @@ document.addEventListener("DOMContentLoaded", () => {
       }
       isSelecting = false;
       drawWithTransformations();
-    } else if (isMoveMode && isDragging) {
+    } else if (isCopyMode && isDragging) {
       isDragging = false;
       isSelected = false;
+
+      if (!isCopyMode) {
+        // Clear the original selected area if it's Move Mode
+        ctx.clearRect(imgX, imgY, imgWidth, imgHeight);
+      }
+
       isSelecting = false;
       selectedImageData = null;
       drawWithTransformations();
+      saveState();
+    } else if (isMoveMode && isDragging) {
+      isDragging = false;
+      isSelected = false;
+      selectedImageData = null;
       saveState();
     } else {
       drawing = false;
@@ -275,7 +338,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   canvas.addEventListener("mousedown", function (e) {
-    console.log("mousedown içinde isMoveMode: " + isMoveMode);
+    console.log("mousedown içinde isCopyMode: " + isCopyMode);
     console.log("mousedown içinde isSelecting: " + isSelecting);
     //Sürüklemek için
     if (zoomMode) {
@@ -301,7 +364,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       canvas.addEventListener("mousemove", onMouseMove);
       canvas.addEventListener("mouseup", onMouseUp);
-    } else if (isMoveMode && !e.shiftKey) {
+    } else if (isCopyMode && !e.shiftKey) {
       if (!isSelected) {
         // Starting a new selection
         isSelecting = false;
@@ -317,6 +380,24 @@ document.addEventListener("DOMContentLoaded", () => {
         lastPos.x = e.clientX - canvas.offsetLeft;
         lastPos.y = e.clientY - canvas.offsetTop;
         drawWithTransformations();
+      }
+    } else if (isMoveMode && !e.shiftKey) {
+      if (isSelected) {
+        // If an area is already selected and we are about to move it
+        isDragging = true;
+        lastPos.x = e.clientX - canvas.offsetLeft;
+        lastPos.y = e.clientY - canvas.offsetTop;
+
+        // Clear the selected region and store the rest
+        ctx.clearRect(imgX, imgY, imgWidth, imgHeight);
+        canvasBuffer = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+        drawWithTransformations();
+      } else {
+        // Starting a new selection
+        isSelecting = true;
+        selectionRect.startX = e.clientX - canvas.offsetLeft;
+        selectionRect.startY = e.clientY - canvas.offsetTop;
       }
     } else {
       drawing = true;
@@ -367,7 +448,7 @@ document.addEventListener("DOMContentLoaded", () => {
     deactivateEraser();
     unclick("zoomin");
     zoomMode = false;
-    isMoveMode = false;
+    isCopyMode = false;
     isSelecting = false;
     click("brush-btn");
   };
@@ -378,7 +459,7 @@ document.addEventListener("DOMContentLoaded", () => {
     deactivateEraser();
     click("zoomin");
     unclick("brush-btn");
-    isMoveMode = false;
+    isCopyMode = false;
     isSelecting = false;
     if (!zoomMode) {
       unclick("zoomin");
@@ -390,7 +471,7 @@ document.addEventListener("DOMContentLoaded", () => {
     click("eraser");
     unclick("brush-btn");
     unclick("zoomin");
-    isMoveMode = false;
+    isCopyMode = false;
     eraserModeOn = true;
     isSelecting = false;
   }
@@ -441,52 +522,55 @@ document.addEventListener("DOMContentLoaded", () => {
     const halfSize = squareSize / 2;
 
     if (eraserModeOn) {
-        // Find the triangle in the triangles array that matches i, j, and position
-        const triangleIndex = triangles.findIndex(triangle => 
-            triangle.i === i && triangle.j === j && triangle.position === position && triangle.color === color
-        );
+      // Find the triangle in the triangles array that matches i, j, and position
+      const triangleIndex = triangles.findIndex(
+        (triangle) =>
+          triangle.i === i &&
+          triangle.j === j &&
+          triangle.position === position &&
+          triangle.color === color
+      );
 
-        // Remove the triangle from the triangles array
-        if (triangleIndex !== -1) {
-            triangles.splice(triangleIndex, 1);
-        }
+      // Remove the triangle from the triangles array
+      if (triangleIndex !== -1) {
+        triangles.splice(triangleIndex, 1);
+      }
 
-        // Clear that triangle on the canvas
-        targetCtx.globalCompositeOperation = "destination-out";
-        targetCtx.fillStyle = "rgba(255,255,255,1)"; // using white to erase (with dest-out it becomes transparent)
+      // Clear that triangle on the canvas
+      targetCtx.globalCompositeOperation = "destination-out";
+      targetCtx.fillStyle = "rgba(255,255,255,1)"; // using white to erase (with dest-out it becomes transparent)
     } else {
-        triangles.push({ i, j, position, color: color || preferredColor });
-        targetCtx.fillStyle = color || preferredColor;
+      triangles.push({ i, j, position, color: color || preferredColor });
+      targetCtx.fillStyle = color || preferredColor;
     }
 
     targetCtx.beginPath();
     switch (position) {
-        case "top":
-            targetCtx.moveTo(x, y);
-            targetCtx.lineTo(x + squareSize, y);
-            targetCtx.lineTo(x + halfSize, y + halfSize);
-            break;
-        case "right":
-            targetCtx.moveTo(x + squareSize, y);
-            targetCtx.lineTo(x + squareSize, y + squareSize);
-            targetCtx.lineTo(x + halfSize, y + halfSize);
-            break;
-        case "bottom":
-            targetCtx.moveTo(x, y + squareSize);
-            targetCtx.lineTo(x + squareSize, y + squareSize);
-            targetCtx.lineTo(x + halfSize, y + halfSize);
-            break;
-        case "left":
-            targetCtx.moveTo(x, y);
-            targetCtx.lineTo(x, y + squareSize);
-            targetCtx.lineTo(x + halfSize, y + halfSize);
-            break;
+      case "top":
+        targetCtx.moveTo(x, y);
+        targetCtx.lineTo(x + squareSize, y);
+        targetCtx.lineTo(x + halfSize, y + halfSize);
+        break;
+      case "right":
+        targetCtx.moveTo(x + squareSize, y);
+        targetCtx.lineTo(x + squareSize, y + squareSize);
+        targetCtx.lineTo(x + halfSize, y + halfSize);
+        break;
+      case "bottom":
+        targetCtx.moveTo(x, y + squareSize);
+        targetCtx.lineTo(x + squareSize, y + squareSize);
+        targetCtx.lineTo(x + halfSize, y + halfSize);
+        break;
+      case "left":
+        targetCtx.moveTo(x, y);
+        targetCtx.lineTo(x, y + squareSize);
+        targetCtx.lineTo(x + halfSize, y + halfSize);
+        break;
     }
     targetCtx.closePath();
     targetCtx.fill();
     targetCtx.globalCompositeOperation = "source-over"; // Reset
-}
-
+  }
 
   // After each draw operation, ensure to update the visible canvas
   function afterDrawing() {
@@ -497,7 +581,7 @@ document.addEventListener("DOMContentLoaded", () => {
     unclick("zoomin");
     changeColor("#00FF00");
     click("brush-btn");
-    isMoveMode = false;
+    isCopyMode = false;
     isSelecting = false;
     zoomMode = false;
   };
@@ -507,7 +591,7 @@ document.addEventListener("DOMContentLoaded", () => {
     changeColor("red");
     unclick("zoomin");
     click("brush-btn");
-    isMoveMode = false;
+    isCopyMode = false;
     isSelecting = false;
     zoomMode = false;
   };
@@ -517,7 +601,7 @@ document.addEventListener("DOMContentLoaded", () => {
     unclick("zoomin");
     zoomMode = false;
     click("brush-btn");
-    isMoveMode = false;
+    isCopyMode = false;
     isSelecting = false;
     changeColor("yellow");
   };
@@ -526,7 +610,7 @@ document.addEventListener("DOMContentLoaded", () => {
     deactivateEraser();
     unclick("zoomin");
     click("brush-btn");
-    isMoveMode = false;
+    isCopyMode = false;
     isSelecting = false;
     zoomMode = false;
 
@@ -538,7 +622,7 @@ document.addEventListener("DOMContentLoaded", () => {
     unclick("zoomin");
     click("brush-btn");
     zoomMode = false;
-    isMoveMode = false;
+    isCopyMode = false;
     isSelecting = false;
     changeColor("orange");
   };
@@ -548,7 +632,7 @@ document.addEventListener("DOMContentLoaded", () => {
     click("brush-btn");
     unclick("zoomin");
     zoomMode = false;
-    isMoveMode = false;
+    isCopyMode = false;
     isSelecting = false;
     changeColor("pink");
   };
@@ -557,7 +641,7 @@ document.addEventListener("DOMContentLoaded", () => {
     deactivateEraser();
     unclick("zoomin");
     click("brush-btn");
-    isMoveMode = false;
+    isCopyMode = false;
     isSelecting = false;
     zoomMode = false;
     changeColor("cyan");
@@ -567,175 +651,193 @@ document.addEventListener("DOMContentLoaded", () => {
     deactivateEraser();
     unclick("zoomin");
     click("brush-btn");
-    isMoveMode = false;
+    isCopyMode = false;
     zoomMode = false;
     changeColor("magenta");
   };
 
-  document.getElementById("lay1").onchange = function() {
+  document.getElementById("lay1").onchange = function () {
     var rds = document.querySelectorAll('input[name="rad"]');
-    for(var i = 0; i < 4; i++){
-        if(rds[i].checked == true){
-            crtLayer = rds[i].value;
-            break;
-        }
+    for (var i = 0; i < 4; i++) {
+      if (rds[i].checked == true) {
+        crtLayer = rds[i].value;
+        break;
+      }
     }
     console.log("crtlayer select: " + crtLayer);
-}
+  };
 
-document.getElementById("lay2").onchange = function() {
+  document.getElementById("lay2").onchange = function () {
     var rds = document.querySelectorAll('input[name="rad"]');
-    for(var i = 0; i < 4; i++){
-        if(rds[i].checked == true){
-            crtLayer = rds[i].value;
-            break;
-        }
+    for (var i = 0; i < 4; i++) {
+      if (rds[i].checked == true) {
+        crtLayer = rds[i].value;
+        break;
+      }
     }
     console.log("crtlayer select: " + crtLayer);
-}
+  };
 
-document.getElementById("lay3").onchange = function() {
+  document.getElementById("lay3").onchange = function () {
     var rds = document.querySelectorAll('input[name="rad"]');
-    for(var i = 0; i < 4; i++){
-        if(rds[i].checked == true){
-            crtLayer = rds[i].value;
-            break;
-        }
+    for (var i = 0; i < 4; i++) {
+      if (rds[i].checked == true) {
+        crtLayer = rds[i].value;
+        break;
+      }
     }
     console.log("crtlayer select: " + crtLayer);
-}
-document.getElementById("aboveBtn").onclick = function() {
-  var crtLoc = findLayerLoc(crtLayer);
-  if(crtLoc!=0){
+  };
+  document.getElementById("aboveBtn").onclick = function () {
+    var crtLoc = findLayerLoc(crtLayer);
+    if (crtLoc != 0) {
       var rbs = document.querySelectorAll('input[name="rad"]');
       rbs[crtLoc].checked = false;
       rbs[crtLoc - 1].checked = true;
       var tempval = rbs[crtLoc].value;
       rbs[crtLoc].value = rbs[crtLoc - 1].value;
       rbs[crtLoc - 1].value = tempval;
-      var first = (layers[crtLoc]).toString();
-      var second = (layers[crtLoc - 1]).toString();
-      document.getElementById(crtLoc + 1).innerHTML="Layer " + second;
-      document.getElementById(crtLoc).innerHTML="Layer " + first;
+      var first = layers[crtLoc].toString();
+      var second = layers[crtLoc - 1].toString();
+      document.getElementById(crtLoc + 1).innerHTML = "Layer " + second;
+      document.getElementById(crtLoc).innerHTML = "Layer " + first;
       var loc = layers[crtLoc - 1];
       layers[crtLoc - 1] = layers[crtLoc];
       layers[crtLoc] = loc;
 
-      var crtz = ((crtLoc)*0.25) - 0.99;
-      var nextz = ((crtLoc - 1)*0.25) - 0.99;
+      var crtz = crtLoc * 0.25 - 0.99;
+      var nextz = (crtLoc - 1) * 0.25 - 0.99;
       console.log("crt: " + crtz + "next: " + nextz);
-      for(var i = 0; i < points.length; i++){
-          if(points[i][2] == crtz){
-              points[i][2] = nextz;
-          } else if(points[i][2] == nextz){
-              points[i][2] = crtz;
-          }
+      for (var i = 0; i < points.length; i++) {
+        if (points[i][2] == crtz) {
+          points[i][2] = nextz;
+        } else if (points[i][2] == nextz) {
+          points[i][2] = crtz;
+        }
       }
-      for(var i = 0; i < allpoints.length; i++){
-          if(allpoints[i][2] == crtz){
-              allpoints[i][2] = nextz;
-          } else if(allpoints[i][2] == nextz){
-              allpoints[i][2] = crtz;
-          }
+      for (var i = 0; i < allpoints.length; i++) {
+        if (allpoints[i][2] == crtz) {
+          allpoints[i][2] = nextz;
+        } else if (allpoints[i][2] == nextz) {
+          allpoints[i][2] = crtz;
+        }
       }
-      gl.bindBuffer( gl.ARRAY_BUFFER, vBuffer );
+      gl.bindBuffer(gl.ARRAY_BUFFER, vBuffer);
       gl.bufferSubData(gl.ARRAY_BUFFER, 0, flatten(allpoints.concat(points)));
       render();
-  }
-}
+    }
+  };
 
-document.getElementById("belowBtn").onclick = function() {
-  var crtLoc = findLayerLoc(crtLayer);
-  if(crtLoc!=2){
+  document.getElementById("belowBtn").onclick = function () {
+    var crtLoc = findLayerLoc(crtLayer);
+    if (crtLoc != 2) {
       var rbs = document.querySelectorAll('input[name="rad"]');
       rbs[crtLoc].checked = false;
       rbs[crtLoc + 1].checked = true;
       var tempval = rbs[crtLoc].value;
       rbs[crtLoc].value = rbs[crtLoc + 1].value;
       rbs[crtLoc + 1].value = tempval;
-      var first = (layers[crtLoc]).toString();
-      var second = (layers[crtLoc + 1]).toString();
-      document.getElementById(crtLoc + 1).innerHTML="Layer " + second;
-      document.getElementById(crtLoc + 2).innerHTML="Layer " + first;
+      var first = layers[crtLoc].toString();
+      var second = layers[crtLoc + 1].toString();
+      document.getElementById(crtLoc + 1).innerHTML = "Layer " + second;
+      document.getElementById(crtLoc + 2).innerHTML = "Layer " + first;
       var loc = layers[crtLoc + 1];
       layers[crtLoc + 1] = layers[crtLoc];
       layers[crtLoc] = loc;
 
-      var crtz = ((crtLoc)*0.25) - 0.99;
-      var nextz = ((crtLoc + 1)*0.25) - 0.99;
+      var crtz = crtLoc * 0.25 - 0.99;
+      var nextz = (crtLoc + 1) * 0.25 - 0.99;
       console.log("crt: " + crtz + "next: " + nextz);
-      for(var i = 0; i < points.length; i++){
-          if(points[i][2] == crtz){
-              points[i][2] = nextz;
-          } else if(points[i][2] == nextz){
-              points[i][2] = crtz;
-          }
+      for (var i = 0; i < points.length; i++) {
+        if (points[i][2] == crtz) {
+          points[i][2] = nextz;
+        } else if (points[i][2] == nextz) {
+          points[i][2] = crtz;
+        }
       }
-      for(var i = 0; i < allpoints.length; i++){
-          if(allpoints[i][2] == crtz){
-              allpoints[i][2] = nextz;
-          } else if(allpoints[i][2] == nextz){
-              allpoints[i][2] = crtz;
-          }
+      for (var i = 0; i < allpoints.length; i++) {
+        if (allpoints[i][2] == crtz) {
+          allpoints[i][2] = nextz;
+        } else if (allpoints[i][2] == nextz) {
+          allpoints[i][2] = crtz;
+        }
       }
-      gl.bindBuffer( gl.ARRAY_BUFFER, vBuffer );
+      gl.bindBuffer(gl.ARRAY_BUFFER, vBuffer);
       gl.bufferSubData(gl.ARRAY_BUFFER, 0, flatten(allpoints.concat(points)));
       render();
-  }
-}
+    }
+  };
 
-document.getElementById("saveBtn").onclick = function () {
-  const blob = new Blob([JSON.stringify(triangles)], {type: "text/plain"});
-  const url = URL.createObjectURL(blob);
+  document.getElementById("saveBtn").onclick = function () {
+    const blob = new Blob([JSON.stringify(triangles)], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
 
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'saved.txt';
-  a.click("brush-btn");
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "saved.txt";
+    a.click("brush-btn");
 
-  URL.revokeObjectURL(url);
-
-
-};
-fileBtn.addEventListener("change",  function () {
-  if(fileBtn.value){
-      uploadTxt.innerHTML = fileBtn.value.match(/[\/\\]([\w\d\s\.\-\(\)]+)$/)[1];
-  } else {
+    URL.revokeObjectURL(url);
+  };
+  fileBtn.addEventListener("change", function () {
+    if (fileBtn.value) {
+      uploadTxt.innerHTML = fileBtn.value.match(
+        /[\/\\]([\w\d\s\.\-\(\)]+)$/
+      )[1];
+    } else {
       uploadTxt.innerHTML = "No file chosen, yet!";
-  }
-});
+    }
+  });
 
-document.getElementById("selectBtn").onclick = function () {
-  fileBtn.click("brush-btn");
-  // document.getElementById("up-file").click();  // Trigger file input's click
-}
+  document.getElementById("selectBtn").onclick = function () {
+    fileBtn.click("brush-btn");
+    // document.getElementById("up-file").click();  // Trigger file input's click
+  };
 
-document.getElementById("up-file").addEventListener('change', function(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-  
-  const reader = new FileReader();
-  reader.onload = function(event) {
-    const loadedTriangles = JSON.parse(event.target.result);
+  document
+    .getElementById("up-file")
+    .addEventListener("change", function (event) {
+      const file = event.target.files[0];
+      if (!file) return;
 
-      console.log(loadedTriangles);
+      const reader = new FileReader();
+      reader.onload = function (event) {
+        const loadedTriangles = JSON.parse(event.target.result);
 
-      // Clear your triangles array and canvas here if necessary
-      triangles.length = 0;
-      ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-      bufferCtx.clearRect(0, 0, bufferCtx.canvas.width, bufferCtx.canvas.height);
+        console.log(loadedTriangles);
 
-      // Redraw the triangles
-      for (const triangle of loadedTriangles) {
-        drawTriangle(triangle.i, triangle.j, triangle.position, ctx, triangle.color);
-          drawTriangle(triangle.i, triangle.j, triangle.position, bufferCtx, triangle.color);
+        // Clear your triangles array and canvas here if necessary
+        triangles.length = 0;
+        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+        bufferCtx.clearRect(
+          0,
+          0,
+          bufferCtx.canvas.width,
+          bufferCtx.canvas.height
+        );
 
+        // Redraw the triangles
+        for (const triangle of loadedTriangles) {
+          drawTriangle(
+            triangle.i,
+            triangle.j,
+            triangle.position,
+            ctx,
+            triangle.color
+          );
+          drawTriangle(
+            triangle.i,
+            triangle.j,
+            triangle.position,
+            bufferCtx,
+            triangle.color
+          );
 
           triangles.push(triangle);
-      }
-  };
-  reader.readAsText(file);
-});
+        }
+      };
+      reader.readAsText(file);
+    });
   function unclick(id) {
     var element = document.getElementById(id);
     element.classList.remove("clicked");
@@ -791,13 +893,12 @@ document.getElementById("up-file").addEventListener('change', function(event) {
       drawWithTransformations(); // Ensure to reflect changes on the main canvas
     };
   }
-  function findLayerLoc(crt){
-    for(var i = 0; i < 3; i++){
-        if(layers[i] == crt)
-            return i;
+  function findLayerLoc(crt) {
+    for (var i = 0; i < 3; i++) {
+      if (layers[i] == crt) return i;
     }
     return -1;
-}
+  }
 
   // Event listeners for buttons
   document.getElementById("undo").addEventListener("click", undo);
