@@ -14,11 +14,29 @@ document.addEventListener("DOMContentLoaded", () => {
   const fileBtn = document.getElementById("up-file");
   const uploadTxt = document.getElementById("txt");
 
+<<<<<<< Updated upstream
   var crtLayer = 1;
   var layers = [1, 2, 3];
+=======
+  var currentLayerIndex = 0;
+  layers = [
+    {
+        triangles: [],
+        z: -0.99
+    },
+    {
+        triangles: [],
+        z: -0.74
+    },
+    {
+        triangles: [],
+        z: -0.49
+    }
+];
+
+>>>>>>> Stashed changes
   var moveOn = false;
   var first = true;
-  var t1, t2, t3;
 
   let canvasBuffer;
 
@@ -189,6 +207,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
+<<<<<<< Updated upstream
   //   function updateBufferAndDraw() {
   //     bufferCtx.clearRect(0, 0, buffer.width, buffer.height);
 
@@ -198,6 +217,9 @@ document.addEventListener("DOMContentLoaded", () => {
   //     // Draw the updated buffer on the main canvas
   //     drawWithTransformations();
   //   }
+=======
+
+>>>>>>> Stashed changes
 
   function drawWithTransformations() {
     // console.log("Move mode: " + isCopyMode);
@@ -404,6 +426,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
+<<<<<<< Updated upstream
   let selectedDrawings = [];
 
   function selectDrawings() {
@@ -432,14 +455,9 @@ document.addEventListener("DOMContentLoaded", () => {
       y: evt.clientY - rect.top,
     };
   }
+=======
+>>>>>>> Stashed changes
 
-  function drawGrid() {
-    for (let i = 0; i < numSquares; i++) {
-      for (let j = 0; j < numSquares; j++) {
-        drawSquare(i, j, bufferCtx);
-      }
-    }
-  }
   document.getElementById("eraser").onclick = function () {
     activateEraser();
   };
@@ -516,12 +534,13 @@ document.addEventListener("DOMContentLoaded", () => {
     targetCtx.stroke();
   }
 
-  function drawTriangle(i, j, position, targetCtx, color) {
+  function drawTriangle(i, j, position, targetCtx, color,z) {
     const x = i * squareSize;
     const y = j * squareSize;
     const halfSize = squareSize / 2;
 
     if (eraserModeOn) {
+<<<<<<< Updated upstream
       // Find the triangle in the triangles array that matches i, j, and position
       const triangleIndex = triangles.findIndex(
         (triangle) =>
@@ -535,13 +554,32 @@ document.addEventListener("DOMContentLoaded", () => {
       if (triangleIndex !== -1) {
         triangles.splice(triangleIndex, 1);
       }
+=======
+          const index = layers[currentLayerIndex].findIndex(triangle => 
+            triangle.i === i && triangle.j === j && triangle.position === position && triangle.color === color || preferredColor
+        );
+
+        if (index !== -1) {
+            layers[currentLayerIndex].splice(index, 1);
+        }
+>>>>>>> Stashed changes
 
       // Clear that triangle on the canvas
       targetCtx.globalCompositeOperation = "destination-out";
       targetCtx.fillStyle = "rgba(255,255,255,1)"; // using white to erase (with dest-out it becomes transparent)
     } else {
+<<<<<<< Updated upstream
       triangles.push({ i, j, position, color: color || preferredColor });
       targetCtx.fillStyle = color || preferredColor;
+=======
+      console.log("currentLayerIndex:", currentLayerIndex);
+      console.log("layers:", layers);
+
+        const triangle =  { i, j, position, targetCtx, z, preferredColor };
+        layers[currentLayerIndex].triangles.push(triangle); // Add to current layer
+        triangles.push({ i, j, position, targetCtx, color: color || preferredColor });
+        targetCtx.fillStyle = color || preferredColor;
+>>>>>>> Stashed changes
     }
 
     targetCtx.beginPath();
@@ -658,6 +696,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   document.getElementById("lay1").onchange = function () {
     var rds = document.querySelectorAll('input[name="rad"]');
+<<<<<<< Updated upstream
     for (var i = 0; i < 4; i++) {
       if (rds[i].checked == true) {
         crtLayer = rds[i].value;
@@ -666,9 +705,20 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     console.log("crtlayer select: " + crtLayer);
   };
+=======
+    for(var i = 0; i < 3; i++){
+        if(rds[i].checked == true){
+            currentLayerIndex = rds[i].value -1;
+            break;
+        }
+    }
+    console.log("currentLayerIndex select: " + currentLayerIndex);
+}
+>>>>>>> Stashed changes
 
   document.getElementById("lay2").onchange = function () {
     var rds = document.querySelectorAll('input[name="rad"]');
+<<<<<<< Updated upstream
     for (var i = 0; i < 4; i++) {
       if (rds[i].checked == true) {
         crtLayer = rds[i].value;
@@ -771,6 +821,96 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("saveBtn").onclick = function () {
     const blob = new Blob([JSON.stringify(triangles)], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
+=======
+    for(var i = 0; i < 3; i++){
+        if(rds[i].checked == true){
+          currentLayerIndex = rds[i].value -1;
+            break;
+        }
+    }
+    console.log("currentLayerIndex select: " + currentLayerIndex);
+}
+const layerOrders = [1, 2, 3];
+document.getElementById("lay3").onchange = function() {
+    var rds = document.querySelectorAll('input[name="rad"]');
+    for(var i = 0; i < 3; i++){
+        if(rds[i].checked == true){
+          currentLayerIndex = rds[i].value -1 ;
+            break;
+        }
+    }
+    console.log("currentLayerIndex select: " + currentLayerIndex);
+}
+function moveLayer(direction) {
+  const layerDiv = document.querySelector(".layer-div");
+  const selectedLayer = document.querySelector('input[name="rad"]:checked');
+  const selectedLayerLabel = selectedLayer.closest('.rad-label');
+
+  if (direction === 'above' && selectedLayerLabel.previousElementSibling) {
+      layerDiv.insertBefore(selectedLayerLabel, selectedLayerLabel.previousElementSibling);
+  } else if (direction === 'below' && selectedLayerLabel.nextElementSibling) {
+      layerDiv.insertBefore(selectedLayerLabel.nextElementSibling, selectedLayerLabel);
+  }
+}
+
+document.getElementById("aboveBtn").onclick = function() {
+  if (currentLayerIndex > 0) {
+      const temp = layers[currentLayerIndex];
+      layers[currentLayerIndex] = layers[currentLayerIndex - 1];
+      layers[currentLayerIndex - 1] = temp;
+      currentLayerIndex--;
+
+      moveLayer('above');
+  }
+  renderCanvas();  // Assuming this function redraws everything on the canvas based on layers
+};
+
+document.getElementById("belowBtn").onclick = function() {
+  if (currentLayerIndex < layers.length - 1) {
+      const temp = layers[currentLayerIndex];
+      layers[currentLayerIndex] = layers[currentLayerIndex + 1];
+      layers[currentLayerIndex + 1] = temp;
+      currentLayerIndex++;
+
+      moveLayer('below');
+  }
+  renderCanvas(); // Assuming this function redraws everything on the canvas based on layers
+};
+
+
+function swapLayers(index1, index2) {
+  [layers[index1].z, layers[index2].z] = [layers[index2].z, layers[index1].z];
+  [layers[index1], layers[index2]] = [layers[index2], layers[index1]];
+}
+
+
+function renderCanvas() {
+  // ctx.clearRect(0, 0, canvas.width, canvas.height);
+  
+  const sortedLayers = layers.sort((a, b) => a.z - b.z);
+  
+  for (let layer of sortedLayers) {
+      for (let triangle of layer.triangles) {
+          // drawTriangle(triangle.i, triangle.j, triangle.position, ctx, triangle.color);
+      }
+  }
+}
+
+function drawTriangleOnLayer(i, j, position, targetCtx, color, layerIndex) {
+  const triangle = {
+      i, j, position, color,
+      z: layers[layerIndex].z
+  };
+  layers[layerIndex].triangles.push(triangle);
+  drawTriangle(triangle.i, triangle.j, triangle.position, targetCtx, triangle.color);
+}
+
+
+
+document.getElementById("saveBtn").onclick = function () {
+  const blob = new Blob([JSON.stringify(triangles)], {type: "text/plain"});
+  const url = URL.createObjectURL(blob);
+>>>>>>> Stashed changes
 
     const a = document.createElement("a");
     a.href = url;
