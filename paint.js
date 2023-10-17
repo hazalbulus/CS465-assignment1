@@ -3,15 +3,42 @@ document.addEventListener("DOMContentLoaded", () => {
 
   let isSelected = false; // if a rectangular area is selected
   let isDragging = false; // if we're currently dragging the selected area
-  let selectedDrawings = [];
+  let canvasBuffer;
 
+  let buffer = document.createElement("canvas");
+  let bufferCtx = buffer.getContext("2d");
+  const canvas = document.getElementById("gl-canvas");
+
+  buffer.width = canvas.width;
+  buffer.height = canvas.height;
+
+  let panX = 0;
+  let panY = 0;
+  let zoom = 1;
+  let zoomMode = false;
+
+  let isSelecting = false;
+  let selectionRect = { startX: 0, startY: 0, endX: 0, endY: 0 };
+  let lastPos = { x: 0, y: 0 };
+
+  let triangles = [];
   var preferredColor = "black";
   var eraserModeOn = false;
-  var allpoints = [];
+  let drawing = false;
+  let currentStateIndex = -1;
 
-  const canvas = document.getElementById("gl-canvas");
+  const maxStates = 10;
+  const numSquares = 60; // number of squares per row/column
+  const squareSize = canvas.width / numSquares;
+
+  let isCopyMode = false;
+  let isMoveMode = false;
+  let startX, startY;
+  let selectedImageData = null;
+  let imgX, imgY, imgWidth, imgHeight;
+
+  const states = [];
   const ctx = canvas.getContext("2d", { willReadFrequently: true });
-  const MOVABLE_AREA_SIZE = 100;
   const fileBtn = document.getElementById("up-file");
   const uploadTxt = document.getElementById("txt");
 
@@ -47,89 +74,13 @@ document.addEventListener("DOMContentLoaded", () => {
     layer.canvas.height = canvas.height;
   }
 
-  var moveOn = false;
-  var first = true;
-
-  let canvasBuffer;
-
-  let buffer = document.createElement("canvas");
-  let bufferCtx = buffer.getContext("2d");
-
-  buffer.width = canvas.width;
-  buffer.height = canvas.height;
-
-  let panX = 0;
-  let panY = 0;
-  let zoom = 1;
-  let zoomMode = false;
-
-  let isSelecting = false;
-  let selectionRect = { startX: 0, startY: 0, endX: 0, endY: 0 };
-  let lastPos = { x: 0, y: 0 };
-
-  let triangles = [];
-
   if (!ctx) {
     alert("Your browser does not support canvas!");
     return;
   }
+  
 
-  console.log("Context obtained", ctx);
-
-  let drawing = false;
-  const states = [];
-  let currentStateIndex = -1;
-  const maxStates = 10;
-  const numSquares = 60; // number of squares per row/column
-  const squareSize = canvas.width / numSquares;
-
-  let isCopyMode = false;
-  let isMoveMode = false;
-  let startX, startY;
-  let selectedImageData = null;
-  let imgX, imgY, imgWidth, imgHeight;
-
-  let vertices = [];
-  let indices = [];
-  let colors = [];
-
-  document.getElementById("copyBtn").addEventListener("click", () => {
-    isCopyMode = true;
-    isMoveMode = !isMoveMode;
-    isSelecting = !isSelecting;
-    drawing = false;
-    if (isCopyMode) {
-      isMoveMode = false;
-      unclick("brush-btn");
-      unclick("zoomin");
-      isSelecting = true;
-      canvas.style.cursor = "move";
-      zoomMode = false;
-      drawing = false;
-      deactivateEraser();
-    } else {
-      canvas.style.cursor = "default";
-    }
-  });
-
-  document.getElementById("moveBtn").addEventListener("click", () => {
-    isCopyMode = false;
-    isMoveMode = true;
-    isSelecting = !isSelecting;
-    drawing = false;
-    if (isMoveMode) {
-      isCopyMode = false;
-      unclick("brush-btn");
-      unclick("zoomin");
-      isSelecting = true;
-      canvas.style.cursor = "move";
-      zoomMode = false;
-      drawing = false;
-      deactivateEraser();
-    } else {
-      canvas.style.cursor = "default";
-    }
-  });
+  // Event Listeners
 
   canvas.addEventListener("mousemove", (event) => {
     if (isCopyMode) {
@@ -138,9 +89,6 @@ document.addEventListener("DOMContentLoaded", () => {
         selectionRect.endY = event.clientY - canvas.offsetTop;
         drawWithTransformations();
       } else if (isDragging && selectedImageData) {
-        console.log(
-          "isSelecting false and inside the selectedImageData scope!"
-        );
         let dx = (event.clientX - canvas.offsetLeft - lastPos.x) / zoom;
         let dy = (event.clientY - canvas.offsetTop - lastPos.y) / zoom;
 
@@ -171,9 +119,6 @@ document.addEventListener("DOMContentLoaded", () => {
         selectionRect.endY = event.clientY - canvas.offsetTop;
         drawWithTransformations();
       } else if (isDragging && selectedImageData) {
-        console.log(
-          "isSelecting false and inside the selectedImageData scope!"
-        );
         let dx = (event.clientX - canvas.offsetLeft - lastPos.x) / zoom;
         let dy = (event.clientY - canvas.offsetTop - lastPos.y) / zoom;
 
@@ -195,14 +140,6 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
   });
-
-  function getTransformedMousePos(canvas, evt) {
-    const rect = canvas.getBoundingClientRect();
-    return {
-      x: (evt.clientX - rect.left - panX) / zoom,
-      y: (evt.clientY - rect.top - panY) / zoom,
-    };
-  }
 
   canvas.addEventListener("mousemove", function (e) {
     const currentLayerZ = layers[currentLayerIndex].z;
@@ -228,33 +165,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  function drawWithTransformations() {
-    // console.log("Move mode: " + isCopyMode);
-    // console.log("Selecting mode: " + isSelecting);
-    ctx.save(); // Save the current state
-    ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the canvas
-    ctx.translate(panX, panY); // Move the canvas
-    ctx.scale(zoom, zoom); // Zoom in/out
-
-    // Draw the buffer.
-    //ctx.drawImage(buffer, 0, 0);
-    renderCanvas();
-
-    ctx.restore(); // Restore the original state
-
-    if (isSelecting) {
-      ctx.strokeStyle = "black";
-      ctx.fillStyle = "black";
-      ctx.fill();
-      ctx.strokeRect(
-        selectionRect.startX,
-        selectionRect.startY,
-        selectionRect.endX - selectionRect.startX,
-        selectionRect.endY - selectionRect.startY
-      );
-    }
-  }
-
   canvas.addEventListener(
     //Yakınlaştırmak için
     "wheel",
@@ -264,9 +174,6 @@ document.addEventListener("DOMContentLoaded", () => {
       const scaleFactor = 1.1;
       const cursorX = e.clientX - canvas.getBoundingClientRect().left;
       const cursorY = e.clientY - canvas.getBoundingClientRect().top;
-
-      console.log("cursorX: " + cursorX);
-      console.log("cursorY: " + cursorY);
 
       if (e.deltaY < 0) {
         // Zoom in
@@ -284,7 +191,7 @@ document.addEventListener("DOMContentLoaded", () => {
     },
     { passive: false }
   );
-  // Event Listeners
+
 
   canvas.addEventListener("mouseup", (event) => {
     if ((isCopyMode || isMoveMode) && isSelecting) {
@@ -305,7 +212,6 @@ document.addEventListener("DOMContentLoaded", () => {
           imgHeight
         );
 
-        console.log("selectedImageData: " + selectedImageData);
       }
 
       if (isSelecting) {
@@ -346,9 +252,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   canvas.addEventListener("mousedown", function (e) {
-    console.log("mousedown içinde isCopyMode: " + isCopyMode);
-    console.log("mousedown içinde isSelecting: " + isSelecting);
-    //Sürüklemek için
+
     if (zoomMode) {
       let startX = e.clientX;
       let startY = e.clientY;
@@ -430,6 +334,57 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
+  fileBtn.addEventListener("change", function () {
+    if (fileBtn.value) {
+      uploadTxt.innerHTML = fileBtn.value.match(
+        /[\/\\]([\w\d\s\.\-\(\)]+)$/
+      )[1];
+    } else {
+      uploadTxt.innerHTML = "No file chosen, yet!";
+    }
+  });
+
+  // Event listeners for buttons
+
+  document.getElementById("copyBtn").addEventListener("click", () => {
+    isCopyMode = true;
+    isMoveMode = !isMoveMode;
+    isSelecting = !isSelecting;
+    drawing = false;
+    if (isCopyMode) {
+      isMoveMode = false;
+      unclick("brush-btn");
+      unclick("zoomin");
+      isSelecting = true;
+      canvas.style.cursor = "move";
+      zoomMode = false;
+      drawing = false;
+      deactivateEraser();
+    } else {
+      canvas.style.cursor = "default";
+    }
+  });
+
+  document.getElementById("moveBtn").addEventListener("click", () => {
+    isCopyMode = false;
+    isMoveMode = true;
+    isSelecting = !isSelecting;
+    drawing = false;
+    if (isMoveMode) {
+      isCopyMode = false;
+      unclick("brush-btn");
+      unclick("zoomin");
+      isSelecting = true;
+      canvas.style.cursor = "move";
+      zoomMode = false;
+      drawing = false;
+      deactivateEraser();
+    } else {
+      canvas.style.cursor = "default";
+    }
+  });
+
+
   document.getElementById("eraser").onclick = function () {
     activateEraser();
   };
@@ -458,131 +413,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 
-  function activateEraser() {
-    zoomMode = false;
-    click("eraser");
-    unclick("brush-btn");
-    unclick("zoomin");
-    isCopyMode = false;
-    isMoveMode = false;
-    eraserModeOn = true;
-    isSelecting = false;
-  }
-
-  function deactivateEraser() {
-    unclick("eraser");
-    eraserModeOn = false;
-  }
-  function drawSquare(i, j, targetCtx) {
-    const x = i * squareSize;
-    const y = j * squareSize;
-    const cX = x + squareSize / 2;
-    const cY = y + squareSize / 2;
-
-    // Example: Drawing outlines of triangles
-    targetCtx.beginPath();
-    targetCtx.moveTo(cX, cY);
-    targetCtx.lineTo(x, y + squareSize);
-    targetCtx.lineTo(x + squareSize, y + squareSize);
-    targetCtx.closePath();
-    targetCtx.stroke();
-
-    targetCtx.beginPath();
-    targetCtx.moveTo(cX, cY);
-    targetCtx.lineTo(x + squareSize, y + squareSize);
-    targetCtx.lineTo(x + squareSize, y);
-    targetCtx.closePath();
-    targetCtx.stroke();
-
-    targetCtx.beginPath();
-    targetCtx.moveTo(cX, cY);
-    targetCtx.lineTo(x + squareSize, y);
-    targetCtx.lineTo(x, y);
-    targetCtx.closePath();
-    targetCtx.stroke();
-
-    targetCtx.beginPath();
-    targetCtx.moveTo(cX, cY);
-    targetCtx.lineTo(x, y);
-    targetCtx.lineTo(x, y + squareSize);
-    targetCtx.closePath();
-    targetCtx.stroke();
-  }
-
-  function drawTriangle(i, j, position, color, z) {
-    const layer = layers.find((layer) => layer.z === z);
-    if (!layer) return;
-
-    const x = i * squareSize;
-    const y = j * squareSize;
-    const halfSize = squareSize / 2;
-
-    const targetCtx = layer.canvasCtx;
-
-    if (eraserModeOn) {
-      const index = layer.triangles.findIndex(
-        (triangle) =>
-          triangle.i === i &&
-          triangle.j === j &&
-          triangle.position === position &&
-          triangle.color === color
-      );
-
-      if (index !== -1) {
-        layer.triangles.splice(index, 1);
-      }
-
-      // Clear that triangle on the canvas
-      targetCtx.globalCompositeOperation = "destination-out";
-      targetCtx.fillStyle = "rgba(255,255,255,1)"; // using white to erase (with dest-out it becomes transparent)
-    } else {
-      console.log("currentLayerIndex:", currentLayerIndex);
-      console.log("layers:", layers);
-
-      const triangle = { i, j, position, targetCtx, preferredColor, z };
-      layer.triangles.push(triangle); // Add to current layer
-      triangles.push({
-        i,
-        j,
-        position,
-        targetCtx,
-        color: color || preferredColor,
-      });
-      targetCtx.fillStyle = color || preferredColor;
-    }
-
-    targetCtx.beginPath();
-    switch (position) {
-      case "top":
-        targetCtx.moveTo(x, y);
-        targetCtx.lineTo(x + squareSize, y);
-        targetCtx.lineTo(x + halfSize, y + halfSize);
-        break;
-      case "right":
-        targetCtx.moveTo(x + squareSize, y);
-        targetCtx.lineTo(x + squareSize, y + squareSize);
-        targetCtx.lineTo(x + halfSize, y + halfSize);
-        break;
-      case "bottom":
-        targetCtx.moveTo(x, y + squareSize);
-        targetCtx.lineTo(x + squareSize, y + squareSize);
-        targetCtx.lineTo(x + halfSize, y + halfSize);
-        break;
-      case "left":
-        targetCtx.moveTo(x, y);
-        targetCtx.lineTo(x, y + squareSize);
-        targetCtx.lineTo(x + halfSize, y + halfSize);
-        break;
-    }
-    targetCtx.closePath();
-    targetCtx.fill();
-    targetCtx.globalCompositeOperation = "source-over"; // Reset
-  }
-
-  // After each draw operation, ensure to update the visible canvas
-  function afterDrawing() {
-    drawWithTransformations();
-  }
 
   document.getElementById("cBtn0").onclick = function () {
     drawing = true;
@@ -695,7 +525,6 @@ document.addEventListener("DOMContentLoaded", () => {
         break;
       }
     }
-    console.log("currentLayerIndex select: " + currentLayerIndex);
   };
 
   document.getElementById("lay2").onchange = function () {
@@ -706,7 +535,6 @@ document.addEventListener("DOMContentLoaded", () => {
         break;
       }
     }
-    console.log("currentLayerIndex select: " + currentLayerIndex);
   };
   document.getElementById("lay3").onchange = function () {
     var rds = document.querySelectorAll('input[name="rad"]');
@@ -716,25 +544,8 @@ document.addEventListener("DOMContentLoaded", () => {
         break;
       }
     }
-    console.log("currentLayerIndex select: " + currentLayerIndex);
   };
-  function moveLayer(direction) {
-    const layerDiv = document.querySelector(".layer-div");
-    const selectedLayer = document.querySelector('input[name="rad"]:checked');
-    const selectedLayerLabel = selectedLayer.closest(".rad-label");
 
-    if (direction === "above" && selectedLayerLabel.previousElementSibling) {
-      layerDiv.insertBefore(
-        selectedLayerLabel,
-        selectedLayerLabel.previousElementSibling
-      );
-    } else if (direction === "below" && selectedLayerLabel.nextElementSibling) {
-      layerDiv.insertBefore(
-        selectedLayerLabel.nextElementSibling,
-        selectedLayerLabel
-      );
-    }
-  }
 
   document.getElementById("aboveBtn").onclick = function () {
 
@@ -749,7 +560,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       moveLayer("above");
     }
-    drawWithTransformations(); // Assuming this function redraws everything on the canvas based on layers
+    drawWithTransformations(); 
   };
 
   document.getElementById("belowBtn").onclick = function () {
@@ -764,16 +575,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
       moveLayer("below");
     }
-    drawWithTransformations(); // Assuming this function redraws everything on the canvas based on layers
+    drawWithTransformations();
   };
-
-  function renderCanvas() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    const sortedLayers = layers.sort((a, b) => a.z - b.z);
-    for (let layer of sortedLayers) {
-      ctx.drawImage(layer.canvas, 0, 0);
-    }
-  }
 
   document.getElementById("saveBtn").onclick = function () {
     const blob = new Blob([JSON.stringify(triangles)], { type: "text/plain" });
@@ -786,21 +589,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     URL.revokeObjectURL(url);
   };
-  fileBtn.addEventListener("change", function () {
-    if (fileBtn.value) {
-      uploadTxt.innerHTML = fileBtn.value.match(
-        /[\/\\]([\w\d\s\.\-\(\)]+)$/
-      )[1];
-    } else {
-      uploadTxt.innerHTML = "No file chosen, yet!";
-    }
-  });
 
   document.getElementById("selectBtn").onclick = function () {
     isMoveMode = false;
 
     fileBtn.click("brush-btn");
-    // document.getElementById("up-file").click();  // Trigger file input's click
   };
 
   document
@@ -813,8 +606,6 @@ document.addEventListener("DOMContentLoaded", () => {
       const reader = new FileReader();
       reader.onload = function (event) {
         const loadedTriangles = JSON.parse(event.target.result);
-
-        console.log(loadedTriangles);
 
         // Clear your triangles array and canvas here if necessary
         triangles.length = 0;
@@ -848,6 +639,156 @@ document.addEventListener("DOMContentLoaded", () => {
       };
       reader.readAsText(file);
     });
+    document.getElementById("undo").addEventListener("click", undo);
+    document.getElementById("redo").addEventListener("click", redo);
+
+  
+  //Functions
+
+  function moveLayer(direction) {
+    const layerDiv = document.querySelector(".layer-div");
+    const selectedLayer = document.querySelector('input[name="rad"]:checked');
+    const selectedLayerLabel = selectedLayer.closest(".rad-label");
+
+    if (direction === "above" && selectedLayerLabel.previousElementSibling) {
+      layerDiv.insertBefore(
+        selectedLayerLabel,
+        selectedLayerLabel.previousElementSibling
+      );
+    } else if (direction === "below" && selectedLayerLabel.nextElementSibling) {
+      layerDiv.insertBefore(
+        selectedLayerLabel.nextElementSibling,
+        selectedLayerLabel
+      );
+    }
+  }
+  function renderCanvas() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const sortedLayers = layers.sort((a, b) => a.z - b.z);
+    for (let layer of sortedLayers) {
+      ctx.drawImage(layer.canvas, 0, 0);
+    }
+  }
+
+  function activateEraser() {
+    zoomMode = false;
+    click("eraser");
+    unclick("brush-btn");
+    unclick("zoomin");
+    isCopyMode = false;
+    isMoveMode = false;
+    eraserModeOn = true;
+    isSelecting = false;
+  }
+
+  function deactivateEraser() {
+    unclick("eraser");
+    eraserModeOn = false;
+  }
+
+  function drawTriangle(i, j, position, color, z) {
+    const layer = layers.find((layer) => layer.z === z);
+    if (!layer) return;
+
+    const x = i * squareSize;
+    const y = j * squareSize;
+    const halfSize = squareSize / 2;
+
+    const targetCtx = layer.canvasCtx;
+
+    if (eraserModeOn) {
+      const index = layer.triangles.findIndex(
+        (triangle) =>
+          triangle.i === i &&
+          triangle.j === j &&
+          triangle.position === position &&
+          triangle.color === color
+      );
+
+      if (index !== -1) {
+        layer.triangles.splice(index, 1);
+      }
+
+      // Clear that triangle on the canvas
+      targetCtx.globalCompositeOperation = "destination-out";
+      targetCtx.fillStyle = "rgba(255,255,255,1)"; // using white to erase (with dest-out it becomes transparent)
+    } else {
+
+      const triangle = { i, j, position, targetCtx, preferredColor, z };
+      layer.triangles.push(triangle); // Add to current layer
+      triangles.push({
+        i,
+        j,
+        position,
+        targetCtx,
+        color: color || preferredColor,
+      });
+      targetCtx.fillStyle = color || preferredColor;
+    }
+
+    targetCtx.beginPath();
+    switch (position) {
+      case "top":
+        targetCtx.moveTo(x, y);
+        targetCtx.lineTo(x + squareSize, y);
+        targetCtx.lineTo(x + halfSize, y + halfSize);
+        break;
+      case "right":
+        targetCtx.moveTo(x + squareSize, y);
+        targetCtx.lineTo(x + squareSize, y + squareSize);
+        targetCtx.lineTo(x + halfSize, y + halfSize);
+        break;
+      case "bottom":
+        targetCtx.moveTo(x, y + squareSize);
+        targetCtx.lineTo(x + squareSize, y + squareSize);
+        targetCtx.lineTo(x + halfSize, y + halfSize);
+        break;
+      case "left":
+        targetCtx.moveTo(x, y);
+        targetCtx.lineTo(x, y + squareSize);
+        targetCtx.lineTo(x + halfSize, y + halfSize);
+        break;
+    }
+    targetCtx.closePath();
+    targetCtx.fill();
+    targetCtx.globalCompositeOperation = "source-over"; // Reset
+  }
+
+  // After each draw operation, ensure to update the visible canvas
+  function afterDrawing() {
+    drawWithTransformations();
+  }
+
+  function getTransformedMousePos(canvas, evt) {
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: (evt.clientX - rect.left - panX) / zoom,
+      y: (evt.clientY - rect.top - panY) / zoom,
+    };
+  }
+  
+  function drawWithTransformations() {
+      ctx.save(); // Save the current state
+      ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the canvas
+      ctx.translate(panX, panY); // Move the canvas
+      ctx.scale(zoom, zoom); // Zoom in/out
+  
+      renderCanvas();
+  
+      ctx.restore(); // Restore the original state
+  
+      if (isSelecting) {
+        ctx.strokeStyle = "black";
+        ctx.fillStyle = "black";
+        ctx.fill();
+        ctx.strokeRect(
+          selectionRect.startX,
+          selectionRect.startY,
+          selectionRect.endX - selectionRect.startX,
+          selectionRect.endY - selectionRect.startY
+        );
+      }
+    }
   function unclick(id) {
     var element = document.getElementById(id);
     element.classList.remove("clicked");
@@ -908,16 +849,5 @@ document.addEventListener("DOMContentLoaded", () => {
       drawWithTransformations(); // Ensure to reflect changes on the main canvas
     };
   }
-  function findLayerLoc(crt) {
-    for (var i = 0; i < 3; i++) {
-      if (layers[i] == crt) return i;
-    }
-    return -1;
-  }
-
-  // Event listeners for buttons
-  document.getElementById("undo").addEventListener("click", undo);
-  document.getElementById("redo").addEventListener("click", redo);
-
   saveState(); // Save the initial state (blank canvas)
 });
