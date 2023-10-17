@@ -180,7 +180,7 @@ document.addEventListener("DOMContentLoaded", () => {
         imgX += dx;
         imgY += dy;
 
-        layers[currentLayerIndex].canvasCtx.putImageData(canvasBuffer, 0, 0); // Always put cleared buffer
+        layers[currentLayerIndex].canvasCtx.putImageData(canvasBuffer, 0, 0);
         layers[currentLayerIndex].canvasCtx.putImageData(
           selectedImageData,
           imgX,
@@ -336,6 +336,7 @@ document.addEventListener("DOMContentLoaded", () => {
       isDragging = false;
       isSelected = false;
       selectedImageData = null;
+
       drawWithTransformations();
       saveState();
     } else {
@@ -411,11 +412,11 @@ document.addEventListener("DOMContentLoaded", () => {
         let bufferCtx = document.createElement("canvas").getContext("2d");
         bufferCtx.putImageData(canvasBuffer, 0, 0);
         bufferCtx.clearRect(imgX, imgY, imgWidth, imgHeight);
-        canvasBuffer = bufferCtx.getImageData(
-          0,
-          0,
-          canvas.width,
-          canvas.height
+        layers[currentLayerIndex].canvasCtx.clearRect(
+          imgX,
+          imgY,
+          imgWidth,
+          imgHeight
         );
         drawWithTransformations();
       } else {
