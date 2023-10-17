@@ -255,7 +255,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-
   canvas.addEventListener(
     //Yakınlaştırmak için
     "wheel",
@@ -371,7 +370,7 @@ document.addEventListener("DOMContentLoaded", () => {
       } else {
         // Starting to move the selected area
         isSelecting = false;
-        layers[currentLayerIndex] = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        canvasBuffer = ctx.getImageData(0, 0, canvas.width, canvas.height);
         isDragging = true;
         lastPos.x = e.clientX - canvas.offsetLeft;
         lastPos.y = e.clientY - canvas.offsetTop;
@@ -386,7 +385,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // Clear the selected region and store the rest
         ctx.clearRect(imgX, imgY, imgWidth, imgHeight);
-        layers[currentLayerIndex] = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        canvasBuffer = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
         drawWithTransformations();
       } else {
@@ -487,17 +486,16 @@ document.addEventListener("DOMContentLoaded", () => {
     const targetCtx = layer.canvasCtx;
 
     if (eraserModeOn) {
-      const index = layers[currentLayerIndex].triangles.findIndex(
+      const index = layer.triangles.findIndex(
         (triangle) =>
-          (triangle.i === i &&
-            triangle.j === j &&
-            triangle.position === position &&
-            triangle.color === color) ||
-          (preferredColor && triangle.z === z)
+          triangle.i === i &&
+          triangle.j === j &&
+          triangle.position === position &&
+          triangle.color === color
       );
 
       if (index !== -1) {
-        layers[currentLayerIndex].splice(index, 1);
+        layer.triangles.splice(index, 1);
       }
 
       // Clear that triangle on the canvas
