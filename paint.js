@@ -113,7 +113,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   document.getElementById("moveBtn").addEventListener("click", () => {
-    isCopyMode = !isCopyMode;
+    isCopyMode = false;
     isMoveMode = true;
     isSelecting = !isSelecting;
     drawing = false;
@@ -437,6 +437,7 @@ document.addEventListener("DOMContentLoaded", () => {
     deactivateEraser();
     unclick("zoomin");
     zoomMode = false;
+    isMoveMode = false;
     isCopyMode = false;
     isSelecting = false;
     click("brush-btn");
@@ -449,6 +450,7 @@ document.addEventListener("DOMContentLoaded", () => {
     click("zoomin");
     unclick("brush-btn");
     isCopyMode = false;
+    isMoveMode = false;
     isSelecting = false;
     if (!zoomMode) {
       unclick("zoomin");
@@ -461,6 +463,7 @@ document.addEventListener("DOMContentLoaded", () => {
     unclick("brush-btn");
     unclick("zoomin");
     isCopyMode = false;
+    isMoveMode = false;
     eraserModeOn = true;
     isSelecting = false;
   }
@@ -587,6 +590,7 @@ document.addEventListener("DOMContentLoaded", () => {
     changeColor("#00FF00");
     click("brush-btn");
     isCopyMode = false;
+    isMoveMode = false;
     isSelecting = false;
     zoomMode = false;
   };
@@ -599,6 +603,8 @@ document.addEventListener("DOMContentLoaded", () => {
     click("brush-btn");
     isCopyMode = false;
     isSelecting = false;
+    isMoveMode = false;
+
     zoomMode = false;
   };
 
@@ -609,6 +615,8 @@ document.addEventListener("DOMContentLoaded", () => {
     zoomMode = false;
     click("brush-btn");
     isCopyMode = false;
+    isMoveMode = false;
+
     isSelecting = false;
     changeColor("yellow");
   };
@@ -620,6 +628,8 @@ document.addEventListener("DOMContentLoaded", () => {
     click("brush-btn");
     isCopyMode = false;
     isSelecting = false;
+    isMoveMode = false;
+
     zoomMode = false;
 
     changeColor("black");
@@ -632,6 +642,8 @@ document.addEventListener("DOMContentLoaded", () => {
     click("brush-btn");
     zoomMode = false;
     isCopyMode = false;
+    isMoveMode = false;
+
     isSelecting = false;
     changeColor("orange");
   };
@@ -644,6 +656,8 @@ document.addEventListener("DOMContentLoaded", () => {
     zoomMode = false;
     isCopyMode = false;
     isSelecting = false;
+    isMoveMode = false;
+
     changeColor("pink");
   };
 
@@ -652,6 +666,8 @@ document.addEventListener("DOMContentLoaded", () => {
     deactivateEraser();
     unclick("zoomin");
     click("brush-btn");
+    isMoveMode = false;
+
     isCopyMode = false;
     isSelecting = false;
     zoomMode = false;
@@ -663,6 +679,8 @@ document.addEventListener("DOMContentLoaded", () => {
     deactivateEraser();
     unclick("zoomin");
     click("brush-btn");
+    isMoveMode = false;
+
     isCopyMode = false;
     zoomMode = false;
     changeColor("magenta");
@@ -718,6 +736,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   document.getElementById("aboveBtn").onclick = function () {
+
     const tempZ = layers[currentLayerIndex].z;
     layers[currentLayerIndex].z = layers[currentLayerIndex - 1].z;
     layers[currentLayerIndex - 1].z = tempZ;
@@ -777,6 +796,8 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   document.getElementById("selectBtn").onclick = function () {
+    isMoveMode = false;
+
     fileBtn.click("brush-btn");
     // document.getElementById("up-file").click();  // Trigger file input's click
   };
