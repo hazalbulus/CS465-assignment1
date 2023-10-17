@@ -16,30 +16,36 @@ document.addEventListener("DOMContentLoaded", () => {
   const uploadTxt = document.getElementById("txt");
 
   var currentLayerIndex = 0;
-  layers = [
+  var layers = [
     {
-        triangles: [],
-        z: -0.99,
-        canvas: document.createElement('canvas')
+      triangles: [],
+      z: -0.99,
+      canvas: document.createElement("canvas"),
+      canvasCtx: 0,
     },
     {
-        triangles: [],
-        z: -0.74,
-        canvas: document.createElement('canvas')
+      triangles: [],
+      z: -0.74,
+      canvas: document.createElement("canvas"),
+      canvasCtx: 0,
     },
     {
-        triangles: [],
-        z: -0.49,
-        canvas: document.createElement('canvas')
-    }
-];
+      triangles: [],
+      z: -0.49,
+      canvas: document.createElement("canvas"),
+      canvasCtx: 0,
+    },
+  ];
 
-// Make sure each off-screen canvas has the same dimensions as the main canvas.
-for (let layer of layers) {
+  layers.forEach((layer) => {
+    layer.canvasCtx = layer.canvas.getContext("2d");
+  });
+
+  // Make sure each off-screen canvas has the same dimensions as the main canvas.
+  for (let layer of layers) {
     layer.canvas.width = canvas.width;
     layer.canvas.height = canvas.height;
-}
-
+  }
 
   var moveOn = false;
   var first = true;
@@ -142,11 +148,15 @@ for (let layer of layers) {
         imgY += dy;
 
         if (isCopyMode) {
-          bufferCtx.putImageData(canvasBuffer, 0, 0); // Draw the original canvas
+          layers[currentLayerIndex].canvasCtx.putImageData(canvasBuffer, 0, 0); // Draw the original canvas
         } else {
           ctx.clearRect(imgX - dx, imgY - dy, imgWidth, imgHeight); // Clear the previous position of selected area
         }
-        bufferCtx.putImageData(selectedImageData, imgX, imgY);
+        layers[currentLayerIndex].canvasCtx.putImageData(
+          selectedImageData,
+          imgX,
+          imgY
+        );
 
         lastPos.x = event.clientX - canvas.offsetLeft;
         lastPos.y = event.clientY - canvas.offsetTop;
@@ -170,8 +180,12 @@ for (let layer of layers) {
         imgX += dx;
         imgY += dy;
 
-        bufferCtx.putImageData(canvasBuffer, 0, 0);
-        bufferCtx.putImageData(selectedImageData, imgX, imgY);
+        layers[currentLayerIndex].canvasCtx.putImageData(canvasBuffer, 0, 0);
+        layers[currentLayerIndex].canvasCtx.putImageData(
+          selectedImageData,
+          imgX,
+          imgY
+        );
 
         lastPos.x = event.clientX - canvas.offsetLeft;
         lastPos.y = event.clientY - canvas.offsetTop;
@@ -191,6 +205,7 @@ for (let layer of layers) {
   }
 
   canvas.addEventListener("mousemove", function (e) {
+    const currentLayerZ = layers[currentLayerIndex].z;
     //çizmek için
     if (drawing) {
       const pos = getTransformedMousePos(canvas, e);
@@ -202,17 +217,16 @@ for (let layer of layers) {
       // Determine which triangle to fill
       if (relX > relY) {
         if (squareSize - relX > relY)
-          drawTriangle(i, j, "top", bufferCtx, preferredColor);
-        else drawTriangle(i, j, "right", bufferCtx, preferredColor);
+          drawTriangle(i, j, "top", preferredColor, currentLayerZ);
+        else drawTriangle(i, j, "right", preferredColor, currentLayerZ);
       } else {
         if (squareSize - relX > relY)
-          drawTriangle(i, j, "left", bufferCtx, preferredColor);
-        else drawTriangle(i, j, "bottom", bufferCtx, preferredColor);
+          drawTriangle(i, j, "left", preferredColor, currentLayerZ);
+        else drawTriangle(i, j, "bottom", preferredColor, currentLayerZ);
       }
       afterDrawing();
     }
   });
-
 
   function drawWithTransformations() {
     // console.log("Move mode: " + isCopyMode);
@@ -222,20 +236,9 @@ for (let layer of layers) {
     ctx.translate(panX, panY); // Move the canvas
     ctx.scale(zoom, zoom); // Zoom in/out
 
-    // Draw all the drawings that are not selected.
-    for (let drawing of selectedDrawings) {
-      if (!selectedDrawings.includes(drawing)) {
-        drawDrawing(drawing);
-      }
-    }
-
     // Draw the buffer.
-    ctx.drawImage(buffer, 0, 0);
-
-    // Draw the selected drawings on top.
-    for (let drawing of selectedDrawings) {
-      drawDrawing(drawing);
-    }
+    //ctx.drawImage(buffer, 0, 0);
+    renderCanvas();
 
     ctx.restore(); // Restore the original state
 
@@ -252,28 +255,6 @@ for (let layer of layers) {
     }
   }
 
-  function drawDrawing(drawing) {
-    ctx.save();
-    ctx.translate(drawing.x, drawing.y);
-    ctx.rotate(drawing.rotation);
-    ctx.translate(-drawing.x, -drawing.y);
-
-    // Use the properties of the drawing object to determine how to render it.
-    const i = Math.floor(drawing.x / squareSize);
-    const j = Math.floor(drawing.y / squareSize);
-    const relX = drawing.x - i * squareSize;
-    const relY = drawing.y - j * squareSize;
-
-    if (relX > relY) {
-      if (squareSize - relX > relY) drawTriangle(i, j, "top", bufferCtx);
-      else drawTriangle(i, j, "right", bufferCtx);
-    } else {
-      if (squareSize - relX > relY) drawTriangle(i, j, "left", bufferCtx);
-      else drawTriangle(i, j, "bottom", bufferCtx);
-    }
-
-    ctx.restore();
-  }
 
   canvas.addEventListener(
     //Yakınlaştırmak için
@@ -390,7 +371,7 @@ for (let layer of layers) {
       } else {
         // Starting to move the selected area
         isSelecting = false;
-        canvasBuffer = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        layers[currentLayerIndex] = ctx.getImageData(0, 0, canvas.width, canvas.height);
         isDragging = true;
         lastPos.x = e.clientX - canvas.offsetLeft;
         lastPos.y = e.clientY - canvas.offsetTop;
@@ -405,7 +386,7 @@ for (let layer of layers) {
 
         // Clear the selected region and store the rest
         ctx.clearRect(imgX, imgY, imgWidth, imgHeight);
-        canvasBuffer = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        layers[currentLayerIndex] = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
         drawWithTransformations();
       } else {
@@ -418,7 +399,6 @@ for (let layer of layers) {
       drawing = true;
     }
   });
-
 
   document.getElementById("eraser").onclick = function () {
     activateEraser();
@@ -496,22 +476,29 @@ for (let layer of layers) {
     targetCtx.stroke();
   }
 
-  function drawTriangle(i, j, position, targetCtx, color,z) {
+  function drawTriangle(i, j, position, color, z) {
+    const layer = layers.find((layer) => layer.z === z);
+    if (!layer) return;
+
     const x = i * squareSize;
     const y = j * squareSize;
     const halfSize = squareSize / 2;
 
-    const layer = layers.find(l => l.z === z);
-    const targetCtx = layer.canvas.getContext('2d');
+    const targetCtx = layer.canvasCtx;
 
     if (eraserModeOn) {
-          const index = layers[currentLayerIndex].findIndex(triangle => 
-            triangle.i === i && triangle.j === j && triangle.position === position && triangle.color === color || preferredColor && triangle.z === z
-        );
+      const index = layers[currentLayerIndex].triangles.findIndex(
+        (triangle) =>
+          (triangle.i === i &&
+            triangle.j === j &&
+            triangle.position === position &&
+            triangle.color === color) ||
+          (preferredColor && triangle.z === z)
+      );
 
-        if (index !== -1) {
-            layers[currentLayerIndex].splice(index, 1);
-        }
+      if (index !== -1) {
+        layers[currentLayerIndex].splice(index, 1);
+      }
 
       // Clear that triangle on the canvas
       targetCtx.globalCompositeOperation = "destination-out";
@@ -520,10 +507,16 @@ for (let layer of layers) {
       console.log("currentLayerIndex:", currentLayerIndex);
       console.log("layers:", layers);
 
-        const triangle =  { i, j, position, targetCtx, preferredColor,z };
-        layers[currentLayerIndex].triangles.push(triangle); // Add to current layer
-        triangles.push({ i, j, position, targetCtx, color: color || preferredColor });
-        targetCtx.fillStyle = color || preferredColor;
+      const triangle = { i, j, position, targetCtx, preferredColor, z };
+      layer.triangles.push(triangle); // Add to current layer
+      triangles.push({
+        i,
+        j,
+        position,
+        targetCtx,
+        color: color || preferredColor,
+      });
+      targetCtx.fillStyle = color || preferredColor;
     }
 
     targetCtx.beginPath();
@@ -558,7 +551,9 @@ for (let layer of layers) {
   function afterDrawing() {
     drawWithTransformations();
   }
+
   document.getElementById("cBtn0").onclick = function () {
+    drawing = true;
     deactivateEraser();
     unclick("zoomin");
     changeColor("#00FF00");
@@ -569,6 +564,7 @@ for (let layer of layers) {
   };
 
   document.getElementById("cBtn1").onclick = function () {
+    drawing = true;
     deactivateEraser();
     changeColor("red");
     unclick("zoomin");
@@ -579,6 +575,7 @@ for (let layer of layers) {
   };
 
   document.getElementById("cBtn2").onclick = function () {
+    drawing = true;
     deactivateEraser();
     unclick("zoomin");
     zoomMode = false;
@@ -589,6 +586,7 @@ for (let layer of layers) {
   };
 
   document.getElementById("cBtn3").onclick = function () {
+    drawing = true;
     deactivateEraser();
     unclick("zoomin");
     click("brush-btn");
@@ -600,6 +598,7 @@ for (let layer of layers) {
   };
 
   document.getElementById("cBtn4").onclick = function () {
+    drawing = true;
     deactivateEraser();
     unclick("zoomin");
     click("brush-btn");
@@ -610,6 +609,7 @@ for (let layer of layers) {
   };
 
   document.getElementById("cBtn5").onclick = function () {
+    drawing = true;
     deactivateEraser();
     click("brush-btn");
     unclick("zoomin");
@@ -620,6 +620,7 @@ for (let layer of layers) {
   };
 
   document.getElementById("cBtn6").onclick = function () {
+    drawing = true;
     deactivateEraser();
     unclick("zoomin");
     click("brush-btn");
@@ -630,6 +631,7 @@ for (let layer of layers) {
   };
 
   document.getElementById("cBtn7").onclick = function () {
+    drawing = true;
     deactivateEraser();
     unclick("zoomin");
     click("brush-btn");
@@ -640,87 +642,94 @@ for (let layer of layers) {
 
   document.getElementById("lay1").onchange = function () {
     var rds = document.querySelectorAll('input[name="rad"]');
-    for(var i = 0; i < 3; i++){
-        if(rds[i].checked == true){
-            currentLayerIndex = rds[i].value -1;
-            break;
-        }
+    for (var i = 0; i < 3; i++) {
+      if (rds[i].checked == true) {
+        currentLayerIndex = rds[i].value - 1;
+        break;
+      }
     }
     console.log("currentLayerIndex select: " + currentLayerIndex);
-}
+  };
 
   document.getElementById("lay2").onchange = function () {
     var rds = document.querySelectorAll('input[name="rad"]');
-    for(var i = 0; i < 3; i++){
-        if(rds[i].checked == true){
-          currentLayerIndex = rds[i].value -1;
-            break;
-        }
+    for (var i = 0; i < 3; i++) {
+      if (rds[i].checked == true) {
+        currentLayerIndex = rds[i].value - 1;
+        break;
+      }
     }
     console.log("currentLayerIndex select: " + currentLayerIndex);
-}
-document.getElementById("lay3").onchange = function() {
+  };
+  document.getElementById("lay3").onchange = function () {
     var rds = document.querySelectorAll('input[name="rad"]');
-    for(var i = 0; i < 3; i++){
-        if(rds[i].checked == true){
-          currentLayerIndex = rds[i].value -1 ;
-            break;
-        }
+    for (var i = 0; i < 3; i++) {
+      if (rds[i].checked == true) {
+        currentLayerIndex = rds[i].value - 1;
+        break;
+      }
     }
     console.log("currentLayerIndex select: " + currentLayerIndex);
-}
-function moveLayer(direction) {
-  const layerDiv = document.querySelector(".layer-div");
-  const selectedLayer = document.querySelector('input[name="rad"]:checked');
-  const selectedLayerLabel = selectedLayer.closest('.rad-label');
+  };
+  function moveLayer(direction) {
+    const layerDiv = document.querySelector(".layer-div");
+    const selectedLayer = document.querySelector('input[name="rad"]:checked');
+    const selectedLayerLabel = selectedLayer.closest(".rad-label");
 
-  if (direction === 'above' && selectedLayerLabel.previousElementSibling) {
-      layerDiv.insertBefore(selectedLayerLabel, selectedLayerLabel.previousElementSibling);
-  } else if (direction === 'below' && selectedLayerLabel.nextElementSibling) {
-      layerDiv.insertBefore(selectedLayerLabel.nextElementSibling, selectedLayerLabel);
+    if (direction === "above" && selectedLayerLabel.previousElementSibling) {
+      layerDiv.insertBefore(
+        selectedLayerLabel,
+        selectedLayerLabel.previousElementSibling
+      );
+    } else if (direction === "below" && selectedLayerLabel.nextElementSibling) {
+      layerDiv.insertBefore(
+        selectedLayerLabel.nextElementSibling,
+        selectedLayerLabel
+      );
+    }
   }
-}
 
-document.getElementById("aboveBtn").onclick = function() {
-  if (currentLayerIndex > 0) {
+  document.getElementById("aboveBtn").onclick = function () {
+    const tempZ = layers[currentLayerIndex].z;
+    layers[currentLayerIndex].z = layers[currentLayerIndex - 1].z;
+    layers[currentLayerIndex - 1].z = tempZ;
+    if (currentLayerIndex > 0) {
       const temp = layers[currentLayerIndex];
       layers[currentLayerIndex] = layers[currentLayerIndex - 1];
       layers[currentLayerIndex - 1] = temp;
       currentLayerIndex--;
 
-      moveLayer('above');
-  }
-  renderCanvas();  // Assuming this function redraws everything on the canvas based on layers
-};
+      moveLayer("above");
+    }
+    drawWithTransformations(); // Assuming this function redraws everything on the canvas based on layers
+  };
 
-document.getElementById("belowBtn").onclick = function() {
-  if (currentLayerIndex < layers.length - 1) {
+  document.getElementById("belowBtn").onclick = function () {
+    const tempZ = layers[currentLayerIndex].z;
+    layers[currentLayerIndex].z = layers[currentLayerIndex - 1].z;
+    layers[currentLayerIndex - 1].z = tempZ;
+    if (currentLayerIndex < layers.length - 1) {
       const temp = layers[currentLayerIndex];
       layers[currentLayerIndex] = layers[currentLayerIndex + 1];
       layers[currentLayerIndex + 1] = temp;
       currentLayerIndex++;
 
-      moveLayer('below');
-  }
-  renderCanvas(); // Assuming this function redraws everything on the canvas based on layers
-};
-
-
-function renderCanvas() {
-    const ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    const sortedLayers = layers.sort((a, b) => a.z - b.z);
-
-    for (let layer of sortedLayers) {
-        ctx.drawImage(layer.canvas, 0, 0);
+      moveLayer("below");
     }
-}
+    drawWithTransformations(); // Assuming this function redraws everything on the canvas based on layers
+  };
 
+  function renderCanvas() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const sortedLayers = layers.sort((a, b) => a.z - b.z);
+    for (let layer of sortedLayers) {
+      ctx.drawImage(layer.canvas, 0, 0);
+    }
+  }
 
-document.getElementById("saveBtn").onclick = function () {
-  const blob = new Blob([JSON.stringify(triangles)], {type: "text/plain"});
-  const url = URL.createObjectURL(blob);
+  document.getElementById("saveBtn").onclick = function () {
+    const blob = new Blob([JSON.stringify(triangles)], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
 
     const a = document.createElement("a");
     a.href = url;
@@ -747,6 +756,7 @@ document.getElementById("saveBtn").onclick = function () {
   document
     .getElementById("up-file")
     .addEventListener("change", function (event) {
+      const currentLayerZ = layers[currentLayerIndex].z;
       const file = event.target.files[0];
       if (!file) return;
 
@@ -759,11 +769,11 @@ document.getElementById("saveBtn").onclick = function () {
         // Clear your triangles array and canvas here if necessary
         triangles.length = 0;
         ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-        bufferCtx.clearRect(
+        layers[currentLayerIndex].canvasCtx.clearRect(
           0,
           0,
-          bufferCtx.canvas.width,
-          bufferCtx.canvas.height
+          layers[currentLayerIndex].canvasCtx.canvas.width,
+          layers[currentLayerIndex].canvasCtx.canvas.height
         );
 
         // Redraw the triangles
@@ -772,15 +782,15 @@ document.getElementById("saveBtn").onclick = function () {
             triangle.i,
             triangle.j,
             triangle.position,
-            ctx,
-            triangle.color
+            triangle.color,
+            currentLayerZ
           );
           drawTriangle(
             triangle.i,
             triangle.j,
             triangle.position,
-            bufferCtx,
-            triangle.color
+            triangle.color,
+            currentLayerZ
           );
 
           triangles.push(triangle);
@@ -799,15 +809,6 @@ document.getElementById("saveBtn").onclick = function () {
     element.classList.add("clicked");
   }
 
-  function selectDrawings() {
-    selectedDrawings = []; // Clear previous selection
-
-    for (let drawing of drawings) {
-      if (isInsideSelectionRect(drawing)) {
-        selectedDrawings.push(drawing);
-      }
-    }
-  }
   function changeColor(color) {
     preferredColor = color;
   }
@@ -847,8 +848,13 @@ document.getElementById("saveBtn").onclick = function () {
     const img = new Image();
     img.src = imgData;
     img.onload = () => {
-      bufferCtx.clearRect(0, 0, buffer.width, buffer.height);
-      bufferCtx.drawImage(img, 0, 0);
+      layers[currentLayerIndex].canvasCtx.clearRect(
+        0,
+        0,
+        buffer.width,
+        buffer.height
+      );
+      layers[currentLayerIndex].canvasCtx.drawImage(img, 0, 0);
       drawWithTransformations(); // Ensure to reflect changes on the main canvas
     };
   }
