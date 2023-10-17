@@ -7,13 +7,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
   var preferredColor = "black";
   var eraserModeOn = false;
-  var allpoints = [];
 
   const canvas = document.getElementById("gl-canvas");
   const ctx = canvas.getContext("2d", { willReadFrequently: true });
-  const MOVABLE_AREA_SIZE = 100;
   const fileBtn = document.getElementById("up-file");
   const uploadTxt = document.getElementById("txt");
+  const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+  vertexBuffer = gl.createBuffer();
 
   var currentLayerIndex = 0;
   var layers = [
@@ -92,6 +92,134 @@ document.addEventListener("DOMContentLoaded", () => {
   let vertices = [];
   let indices = [];
   let colors = [];
+  function triangleUnderEraser(i, j, position, layerIndex) {
+    return layers[layerIndex].triangles.findIndex(triangle => 
+        triangle.i === i && triangle.j === j && triangle.position === position
+    );
+}
+const index = triangleUnderEraser(i, j, position, currentLayerIndex);
+if (index !== -1) {
+    layers[currentLayerIndex].triangles.splice(index, 1);
+}
+function rebuildVertexBuffer() {
+  const vertices = [];
+  for (let layer of layers) {
+      for (let triangle of layer.triangles) {
+          const triangleVertices = convertTriangleToVertices(triangle);
+          vertices.push(...triangleVertices);
+      }
+  }
+  updateWebGLVertexBuffer(vertices);
+}
+function updateWebGLVertexBuffer(vertices) {
+  // Assuming you have a WebGL context named `gl`
+  const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+
+  // Bind the buffer
+  gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+
+  // Send the new vertices data to the buffer
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+
+  // Unbind the buffer
+  gl.bindBuffer(gl.ARRAY_BUFFER, null);
+}
+
+
+const TRIANGLE_HEIGHT = Math.sqrt(3) / 2 * squareSize; // Height of an equilateral triangle
+
+function convertTriangleToVertices(triangle) {
+    const x = triangle.i * squareSize;
+    const y = triangle.j * squareSize;
+
+    let vertices = [];
+
+    switch (triangle.position) {
+        case 'top':
+            vertices = [
+                x, y + squareSize,         // bottom-left
+                x + squareSize, y + squareSize, // bottom-right
+                x + squareSize / 2, y  // top-center
+            ];
+            break;
+
+        case 'bottom':
+            vertices = [
+                x, y,                      // top-left
+                x + squareSize, y,         // top-right
+                x + squareSize / 2, y + squareSize // bottom-center
+            ];
+            break;
+
+        case 'left':
+            vertices = [
+                x, y + squareSize / 2,     // right-center
+                x + squareSize / 2, y + squareSize - (TRIANGLE_HEIGHT / 2), // bottom-center
+                x + squareSize / 2, y + (TRIANGLE_HEIGHT / 2)  // top-center
+            ];
+            break;
+
+        case 'right':
+            vertices = [
+                x + squareSize, y + squareSize / 2, // left-center
+                x + squareSize / 2, y + (TRIANGLE_HEIGHT / 2), // top-center
+                x + squareSize / 2, y + squareSize - (TRIANGLE_HEIGHT / 2)  // bottom-center
+            ];
+            break;
+
+        default:
+            console.error(`Unknown triangle position: ${triangle.position}`);
+            return [];
+    }
+
+    return vertices;
+}
+
+
+function eraseTriangleFromCanvas(i, j, position, layerIndex) {
+    const targetCtx = layers[layerIndex].canvas.getContext('2d');
+    const x = i * squareSize;
+    const y = j * squareSize;
+
+    let minX, minY, width, height;
+
+    switch (position) {
+        case 'top':
+            minX = x;
+            minY = y;
+            width = squareSize;
+            height = TRIANGLE_HEIGHT;
+            break;
+
+        case 'bottom':
+            minX = x;
+            minY = y + (squareSize - TRIANGLE_HEIGHT);
+            width = squareSize;
+            height = TRIANGLE_HEIGHT;
+            break;
+
+        case 'left':
+            minX = x;
+            minY = y + squareSize / 2 - TRIANGLE_HEIGHT / 2;
+            width = squareSize / 2;
+            height = TRIANGLE_HEIGHT;
+            break;
+
+        case 'right':
+            minX = x + squareSize / 2;
+            minY = y + squareSize / 2 - TRIANGLE_HEIGHT / 2;
+            width = squareSize / 2;
+            height = TRIANGLE_HEIGHT;
+            break;
+
+        default:
+            console.error(`Unknown triangle position: ${position}`);
+            return;
+    }
+
+    targetCtx.clearRect(minX, minY, width, height);
+}
+
 
   document.getElementById("copyBtn").addEventListener("click", () => {
     isCopyMode = true;
@@ -497,11 +625,8 @@ document.addEventListener("DOMContentLoaded", () => {
       if (index !== -1) {
         layer.triangles.splice(index, 1);
       }
-
-      // Clear that triangle on the canvas
-      targetCtx.globalCompositeOperation = "destination-out";
-      targetCtx.fillStyle = "rgba(255,255,255,1)"; // using white to erase (with dest-out it becomes transparent)
-    } else {
+  }
+   else {
       console.log("currentLayerIndex:", currentLayerIndex);
       console.log("layers:", layers);
 
